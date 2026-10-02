@@ -9,6 +9,7 @@ from flask_migrate import upgrade
 from sqlalchemy import text
 
 from app import create_app
+from app.common.rate_limit import limiter
 from app.extensions import db
 
 
@@ -32,22 +33,30 @@ def migrated_database() -> None:
         db.engine.dispose()
 
 
-def _delete_all_rows() -> None:
-    # DELETE beats TRUNCATE for the handful of rows a test creates: TRUNCATE pays a
-    # fixed per-table cost. Reverse dependency order satisfies foreign keys.
-    for table in reversed(db.metadata.sorted_tables):
-        db.session.execute(table.delete())
-    db.session.commit()
+def _teardown(application: Flask) -> None:
+    with application.app_context():
+        # DELETE beats TRUNCATE for the few rows a test creates. Reverse order satisfies FKs.
+        for table in reversed(db.metadata.sorted_tables):
+            db.session.execute(table.delete())
+        db.session.commit()
+        db.session.remove()
+        db.engine.dispose()
 
 
 @pytest.fixture()
 def app(migrated_database: None) -> Iterator[Flask]:
     application = create_app("test")
     yield application
+    _teardown(application)
+
+
+@pytest.fixture()
+def rate_limited_app(migrated_database: None) -> Iterator[Flask]:
+    application = create_app("test", overrides={"RATELIMIT_ENABLED": True})
     with application.app_context():
-        _delete_all_rows()
-        db.session.remove()
-        db.engine.dispose()
+        limiter.reset()
+    yield application
+    _teardown(application)
 
 
 @pytest.fixture()

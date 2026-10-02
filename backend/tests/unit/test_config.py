@@ -6,6 +6,7 @@ from app.config import ConfigError, build_config, normalize_database_url
 @pytest.fixture()
 def production_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("FRONTEND_ORIGIN", "https://app.example.com")
+    monkeypatch.setenv("EMAIL_BACKEND", "disabled")
 
 
 @pytest.mark.parametrize(
@@ -32,9 +33,20 @@ def test_unknown_environment_refuses_to_start() -> None:
         build_config("staging-typo")
 
 
+@pytest.mark.usefixtures("production_env")
 def test_production_requires_https_frontend_origin(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("FRONTEND_ORIGIN", "http://app.example.com")
-    with pytest.raises(ConfigError):
+    with pytest.raises(ConfigError, match="FRONTEND_ORIGIN"):
+        build_config("production")
+
+
+@pytest.mark.usefixtures("production_env")
+@pytest.mark.parametrize("backend", ["console", "memory"])
+def test_production_rejects_token_exposing_email_backends(
+    monkeypatch: pytest.MonkeyPatch, backend: str
+) -> None:
+    monkeypatch.setenv("EMAIL_BACKEND", backend)
+    with pytest.raises(ConfigError, match="EMAIL_BACKEND"):
         build_config("production")
 
 
