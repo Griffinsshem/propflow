@@ -32,13 +32,12 @@ def migrated_database() -> None:
         db.engine.dispose()
 
 
-def _truncate_all_tables() -> None:
-    quote = db.engine.dialect.identifier_preparer.quote
-    tables = [quote(table.name) for table in db.metadata.sorted_tables]
-    if tables:
-        # Table names come from our own model metadata, never from user input.
-        db.session.execute(text(f"TRUNCATE {', '.join(tables)} RESTART IDENTITY CASCADE"))
-        db.session.commit()
+def _delete_all_rows() -> None:
+    # DELETE beats TRUNCATE for the handful of rows a test creates: TRUNCATE pays a
+    # fixed per-table cost. Reverse dependency order satisfies foreign keys.
+    for table in reversed(db.metadata.sorted_tables):
+        db.session.execute(table.delete())
+    db.session.commit()
 
 
 @pytest.fixture()
@@ -46,7 +45,7 @@ def app(migrated_database: None) -> Iterator[Flask]:
     application = create_app("test")
     yield application
     with application.app_context():
-        _truncate_all_tables()
+        _delete_all_rows()
         db.session.remove()
         db.engine.dispose()
 
