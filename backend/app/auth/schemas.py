@@ -39,3 +39,22 @@ class CurrentUserSchema(Schema):
     email_verified = fields.Boolean()
     active_organization_id = fields.UUID(allow_none=True)
     memberships = fields.List(fields.Nested(MembershipSummarySchema))
+
+
+class ForgotPasswordSchema(Schema):
+    email = fields.Email(required=True, validate=validate.Length(max=320))
+
+
+class ResetPasswordSchema(Schema):
+    token = fields.String(required=True, validate=validate.Length(min=1, max=512))
+    new_password = fields.String(
+        required=True, load_only=True, validate=validate.Length(min=12, max=128)
+    )
+
+
+class EmailTokenSchema(Schema):
+    token = fields.String(required=True, validate=validate.Length(min=1, max=512))
+
+
+class MessageSchema(Schema):
+    message = fields.String()

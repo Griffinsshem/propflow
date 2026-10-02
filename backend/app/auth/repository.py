@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.auth.models import User, UserSession
 from app.extensions import db
@@ -44,3 +45,12 @@ def list_active_memberships(
         .order_by(Organization.name)
     )
     return [(membership, org) for membership, org in db.session.execute(stmt)]
+
+
+def revoke_all_sessions(user_id: uuid.UUID, revoked_at: datetime) -> None:
+    """Single UPDATE, no per-row round trips."""
+    db.session.execute(
+        update(UserSession)
+        .where(UserSession.user_id == user_id, UserSession.revoked_at.is_(None))
+        .values(revoked_at=revoked_at)
+    )

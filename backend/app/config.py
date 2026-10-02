@@ -13,6 +13,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 VALID_ENVS = frozenset({"development", "test", "production"})
 INSECURE_SECRET_PLACEHOLDERS = frozenset({"", "replace-me", "change-me"})
 MIN_SECRET_LENGTH = 32
+EMAIL_BACKENDS = frozenset({"console", "memory", "disabled"})
+# These backends print or retain message bodies, which contain account-recovery tokens.
+NON_PRODUCTION_EMAIL_BACKENDS = frozenset({"console", "memory"})
 
 # Local convenience: load the repo-root .env if it exists.
 # override=False means real environment variables (Render, CI) always win.
@@ -65,6 +68,14 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
     if is_production and not frontend_origin.startswith("https://"):
         raise ConfigError("FRONTEND_ORIGIN must be an https:// origin in production")
 
+    email_backend = (
+        "memory" if is_test else os.environ.get("EMAIL_BACKEND", "console").strip().lower()
+    )
+    if email_backend not in EMAIL_BACKENDS:
+        raise ConfigError(f"EMAIL_BACKEND must be one of {sorted(EMAIL_BACKENDS)}")
+    if is_production and email_backend in NON_PRODUCTION_EMAIL_BACKENDS:
+        raise ConfigError("EMAIL_BACKEND console/memory would expose tokens in production")
+
     return {
         "APP_ENV": env,
         "TESTING": is_test,
@@ -82,6 +93,8 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
         },
         "REDIS_URL": _require("REDIS_URL"),
         "FRONTEND_ORIGIN": frontend_origin,
+        # Number of reverse-proxy hops to trust for the client IP (0 = trust none).
+        "TRUSTED_PROXY_COUNT": _int_env("TRUSTED_PROXY_COUNT", 0),
         # Sessions: opaque server-side tokens in HttpOnly cookies (ADR 0003).
         # The __Host- prefix forces Secure, Path=/ and no Domain: blocks subdomain cookie injection.
         "AUTH_SESSION_COOKIE": "__Host-propflow_session" if is_production else "propflow_session",
@@ -96,6 +109,18 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
         # argon2-cffi defaults (RFC 9106 profile) everywhere except tests, where cheap
         # parameters keep the suite fast. Never use the test parameters in production.
         "ARGON2_PARAMS": {"time_cost": 1, "memory_cost": 1024, "parallelism": 1} if is_test else {},
+        "EMAIL_BACKEND": email_backend,
+        "MAIL_FROM": os.environ.get("MAIL_FROM", "no-reply@propflow.local"),
+        # Rate limiting (ADR 0004). Off in tests unless a test opts in.
+        "RATELIMIT_ENABLED": not is_test,
+        "RATELIMIT_STORAGE_URI": "memory://" if is_test else _require("RATELIMIT_STORAGE_URI"),
+        "RATELIMIT_STRATEGY": "sliding-window-counter",
+        "RATELIMIT_KEY_PREFIX": "propflow",
+        "RATELIMIT_DEFAULT": "1000 per minute",
+        "RATELIMIT_HEADERS_ENABLED": True,
+        # A Redis outage must not lock everyone out: fall back to per-process limits.
+        "RATELIMIT_SWALLOW_ERRORS": True,
+        "RATELIMIT_IN_MEMORY_FALLBACK_ENABLED": True,
         # OpenAPI via flask-smorest. Interactive docs are disabled in production.
         "API_TITLE": "PropFlow API",
         "API_VERSION": "v1",
