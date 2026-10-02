@@ -43,4 +43,4 @@ def list_active_memberships(
         )
         .order_by(Organization.name)
     )
-    return [(membership, org) for membership, org in db.session.execute(stmt).tuples()]
+    return [(membership, org) for membership, org in db.session.execute(stmt)]
