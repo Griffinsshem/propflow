@@ -8,6 +8,9 @@ import redis
 from flask import Flask
 from flask_smorest import Api
 
+from app.api.v1 import register_v1
+from app.auth.middleware import register_auth_middleware
+from app.auth.passwords import init_password_hasher
 from app.common.errors import register_error_handlers
 from app.common.health import health_bp
 from app.common.logging import configure_logging
@@ -36,9 +39,14 @@ def create_app(app_env: str | None = None) -> Flask:
     app.extensions["redis"] = redis.Redis.from_url(
         app.config["REDIS_URL"], socket_connect_timeout=1, socket_timeout=1
     )
+    init_password_hasher(app)
 
+    # Order matters: request IDs first, then session loading, then CSRF checks.
     register_middleware(app)
+    register_auth_middleware(app)
+
     app.register_blueprint(health_bp)
+    register_v1(api)
     # Must come after Api(app) so these handlers replace flask-smorest's defaults.
     register_error_handlers(app)
     return app

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,16 @@ def _require(name: str) -> str:
     return value
 
 
+def _int_env(name: str, default: int) -> int:
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError as exc:
+        raise ConfigError(f"{name} must be an integer") from exc
+
+
 def normalize_database_url(url: str) -> str:
     """Force the psycopg 3 driver; hosting providers usually issue postgres:// URLs."""
     for prefix in ("postgres://", "postgresql://"):
@@ -42,16 +53,21 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
     if env not in VALID_ENVS:
         raise ConfigError(f"APP_ENV must be one of {sorted(VALID_ENVS)}, got {env!r}")
     is_production = env == "production"
+    is_test = env == "test"
 
     secret_key = _require("SECRET_KEY")
     if secret_key in INSECURE_SECRET_PLACEHOLDERS or len(secret_key) < MIN_SECRET_LENGTH:
         raise ConfigError(f"SECRET_KEY must be random and at least {MIN_SECRET_LENGTH} characters")
 
-    database_url = _require("TEST_DATABASE_URL" if env == "test" else "DATABASE_URL")
+    database_url = _require("TEST_DATABASE_URL" if is_test else "DATABASE_URL")
+
+    frontend_origin = os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000").strip().rstrip("/")
+    if is_production and not frontend_origin.startswith("https://"):
+        raise ConfigError("FRONTEND_ORIGIN must be an https:// origin in production")
 
     return {
         "APP_ENV": env,
-        "TESTING": env == "test",
+        "TESTING": is_test,
         "SECRET_KEY": secret_key,
         # API bodies are small JSON. Files go straight to object storage via presigned URLs.
         "MAX_CONTENT_LENGTH": 1 * 1024 * 1024,
@@ -60,12 +76,26 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
         # instances x gunicorn workers x (pool_size + max_overflow). Keep within the DB plan limit.
         "SQLALCHEMY_ENGINE_OPTIONS": {
             "pool_pre_ping": True,
-            "pool_size": int(os.environ.get("DB_POOL_SIZE", "5")),
-            "max_overflow": int(os.environ.get("DB_MAX_OVERFLOW", "5")),
+            "pool_size": _int_env("DB_POOL_SIZE", 5),
+            "max_overflow": _int_env("DB_MAX_OVERFLOW", 5),
             "pool_recycle": 1800,
         },
         "REDIS_URL": _require("REDIS_URL"),
-        "FRONTEND_ORIGIN": os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000"),
+        "FRONTEND_ORIGIN": frontend_origin,
+        # Sessions: opaque server-side tokens in HttpOnly cookies (ADR 0003).
+        # The __Host- prefix forces Secure, Path=/ and no Domain: blocks subdomain cookie injection.
+        "AUTH_SESSION_COOKIE": "__Host-propflow_session" if is_production else "propflow_session",
+        "AUTH_CSRF_COOKIE": "__Host-propflow_csrf" if is_production else "propflow_csrf",
+        "AUTH_COOKIE_SECURE": is_production,
+        "SESSION_IDLE_TIMEOUT": timedelta(
+            seconds=_int_env("SESSION_IDLE_TIMEOUT_SECONDS", 3 * 24 * 3600)
+        ),
+        "SESSION_ABSOLUTE_TIMEOUT": timedelta(
+            seconds=_int_env("SESSION_ABSOLUTE_TIMEOUT_SECONDS", 14 * 24 * 3600)
+        ),
+        # argon2-cffi defaults (RFC 9106 profile) everywhere except tests, where cheap
+        # parameters keep the suite fast. Never use the test parameters in production.
+        "ARGON2_PARAMS": {"time_cost": 1, "memory_cost": 1024, "parallelism": 1} if is_test else {},
         # OpenAPI via flask-smorest. Interactive docs are disabled in production.
         "API_TITLE": "PropFlow API",
         "API_VERSION": "v1",
