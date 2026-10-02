@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from dataclasses import dataclass
 from typing import Any
@@ -16,12 +17,16 @@ from app.organizations.models import OrganizationMembership
 PASSWORD = "correct horse battery staple"
 CSRF_COOKIE = "propflow_csrf"
 ORGS = "/api/v1/organizations"
+INVITATIONS = "/api/v1/invitations"
+MEMBERS = "/api/v1/members"
+TOKEN_IN_LINK = re.compile(r"#token=([A-Za-z0-9_.\-]+)")
 
 
 @dataclass
 class Actor:
     """A logged-in browser: sends the CSRF header automatically on unsafe requests."""
 
+    app: Flask
     client: FlaskClient
     user_id: str
     email: str
@@ -57,7 +62,7 @@ def sign_up(app: Flask, email: str, full_name: str = "Test User") -> Actor:
     payload = {"email": email, "password": PASSWORD, "full_name": full_name}
     response = client.post("/api/v1/auth/register", json=payload)
     assert response.status_code == 201, response.get_json()
-    return Actor(client=client, user_id=response.get_json()["id"], email=email)
+    return Actor(app=app, client=client, user_id=response.get_json()["id"], email=email)
 
 
 def create_organization(owner: Actor, name: str) -> str:
@@ -67,7 +72,7 @@ def create_organization(owner: Actor, name: str) -> str:
 
 
 def add_member(app: Flask, organization_id: str, actor: Actor, role: str) -> None:
-    """Direct insert until invitations exist (Phase 4b replaces this with the real flow)."""
+    """Fast path for tests whose subject isn't invitations; skips the real flow."""
     with app.app_context():
         db.session.add(
             OrganizationMembership(
@@ -82,3 +87,26 @@ def add_member(app: Flask, organization_id: str, actor: Actor, role: str) -> Non
 def activate(actor: Actor, organization_id: str) -> None:
     response = actor.post(f"{ORGS}/{organization_id}/activate")
     assert response.status_code == 200, response.get_json()
+
+
+def last_link_token(app: Flask) -> str:
+    match = TOKEN_IN_LINK.search(app.extensions["outbox"][-1].body)
+    assert match is not None
+    return match.group(1)
+
+
+def invite(inviter: Actor, email: str, role: str) -> str:
+    """Creates an invitation and returns the token from the emailed link."""
+    response = inviter.post(INVITATIONS, json={"email": email, "role": role})
+    assert response.status_code == 201, response.get_json()
+    return last_link_token(inviter.app)
+
+
+def join_via_invitation(
+    inviter: Actor, email: str, role: str, full_name: str = "Invited User"
+) -> Actor:
+    token = invite(inviter, email, role)
+    member = sign_up(inviter.app, email, full_name)
+    response = member.post(f"{INVITATIONS}/accept", json={"token": token})
+    assert response.status_code == 200, response.get_json()
+    return member

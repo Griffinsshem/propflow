@@ -35,3 +35,14 @@ comment on maintenance; contractor can read/update work orders and comment.
 - **Postgres row-level security**: strong defense in depth, but requires per-transaction
   session variables that interact poorly with pooled connections. Deferred; the mandatory
   cross-tenant test suite guards the application-level scoping in the meantime.
+
+## Invitations and member management (Phase 4b)
+- Who may invite or deactivate whom is derived from the permission matrix
+  (`app/authz/policies.py`): owners act on anyone; managers on tenants and contractors.
+- Invitation tokens are opaque, stored as SHA-256 hashes, single-use, 7-day expiry, and bound
+  to the invited email. Accepting marks the email verified (the token proves mailbox access).
+  Re-inviting revokes the previous pending link.
+- Every membership change takes a row lock on the organization (`SELECT ... FOR UPDATE`), so
+  concurrent role changes or deactivations cannot leave an organization without an owner.
+  Invitation acceptance locks the invitation row, so a token cannot be accepted twice.
+- Invitation emails are sent only after commit.
