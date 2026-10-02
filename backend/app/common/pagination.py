@@ -52,13 +52,18 @@ def paginate(
     limit: int,
     cursor: str | None,
     scalars: bool = True,
+    newest_first: bool = True,
 ) -> tuple[list[Any], str | None]:
-    """Newest first. For multi-entity selects (scalars=False) the first entity owns the columns."""
+    """For multi-entity selects (scalars=False) the first entity owns the columns."""
     if cursor:
         created_at, row_id = decode_cursor(cursor)
-        stmt = stmt.where(tuple_(created_column, id_column) < tuple_(created_at, row_id))
-    stmt = stmt.order_by(created_column.desc(), id_column.desc()).limit(limit + 1)
-    result = db.session.execute(stmt)
+        key, bound = tuple_(created_column, id_column), tuple_(created_at, row_id)
+        stmt = stmt.where(key < bound if newest_first else key > bound)
+    if newest_first:
+        stmt = stmt.order_by(created_column.desc(), id_column.desc())
+    else:
+        stmt = stmt.order_by(created_column.asc(), id_column.asc())
+    result = db.session.execute(stmt.limit(limit + 1))
     rows: list[Any] = list(result.scalars()) if scalars else list(result.all())
     page = rows[:limit]
     if len(rows) <= limit:

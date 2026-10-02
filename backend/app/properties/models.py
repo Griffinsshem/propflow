@@ -111,6 +111,7 @@ class Unit(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("property_id", "label"),
         UniqueConstraint("id", "organization_id"),  # composite-FK target for tenant integrity
+        UniqueConstraint("id", "property_id"),  # target of the maintenance (unit, property) FK
         ForeignKeyConstraint(
             ["property_id", "organization_id"],
             ["properties.id", "properties.organization_id"],

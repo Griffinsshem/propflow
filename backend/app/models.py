@@ -2,6 +2,7 @@
 
 from app.audit.models import AuditLog
 from app.auth.models import User, UserSession
+from app.maintenance.models import MaintenanceComment, MaintenanceRequest, MaintenanceStatusHistory
 from app.organizations.models import Invitation, Organization, OrganizationMembership
 from app.properties.models import Building, Property, PropertyAssignment, Unit
 from app.tenants.models import TenantProfile
@@ -10,6 +11,9 @@ __all__ = [
     "AuditLog",
     "Building",
     "Invitation",
+    "MaintenanceComment",
+    "MaintenanceRequest",
+    "MaintenanceStatusHistory",
     "Organization",
     "OrganizationMembership",
     "Property",
