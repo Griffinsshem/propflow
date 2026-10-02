@@ -11,6 +11,7 @@ from sqlalchemy import text
 from app import create_app
 from app.common.rate_limit import limiter
 from app.extensions import db
+from tests.support import TwoOrgs, create_organization, sign_up
 
 
 def _assert_is_test_database() -> None:
@@ -35,6 +36,8 @@ def migrated_database() -> None:
 
 def _teardown(application: Flask) -> None:
     with application.app_context():
+        # The audit trigger permits DELETE only with this transaction-local flag.
+        db.session.execute(text("SET LOCAL propflow.audit_maintenance = 'on'"))
         # DELETE beats TRUNCATE for the few rows a test creates. Reverse order satisfies FKs.
         for table in reversed(db.metadata.sorted_tables):
             db.session.execute(table.delete())
@@ -62,3 +65,12 @@ def rate_limited_app(migrated_database: None) -> Iterator[Flask]:
 @pytest.fixture()
 def client(app: Flask) -> FlaskClient:
     return app.test_client()
+
+
+@pytest.fixture()
+def two_orgs(app: Flask) -> TwoOrgs:
+    a_owner = sign_up(app, "owner.a@example.com", "Owner A")
+    org_a = create_organization(a_owner, "Org A")
+    b_owner = sign_up(app, "owner.b@example.com", "Owner B")
+    org_b = create_organization(b_owner, "Org B")
+    return TwoOrgs(app=app, a_owner=a_owner, b_owner=b_owner, org_a=org_a, org_b=org_b)
