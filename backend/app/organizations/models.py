@@ -61,6 +61,7 @@ class OrganizationMembership(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "organization_memberships"
     __table_args__ = (
         UniqueConstraint("organization_id", "user_id"),
+        UniqueConstraint("id", "organization_id"),  # composite-FK target for tenant integrity
         CheckConstraint(enum_values_check("role", MembershipRole), name="role_valid"),
         CheckConstraint(enum_values_check("status", MembershipStatus), name="status_valid"),
         # (organization_id, ...) lookups use the unique constraint's index; this serves "my orgs".
