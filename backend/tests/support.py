@@ -146,3 +146,22 @@ def assign_manager(owner: Actor, property_id: str, membership_id: str) -> None:
         f"{PROPERTIES}/{property_id}/managers", json={"membership_id": membership_id}
     )
     assert response.status_code == 200, response.get_json()
+
+
+TENANTS = "/api/v1/tenants"
+
+
+def place_tenant(inviter: Actor, email: str, unit_id: str, full_name: str = "Test Tenant") -> Actor:
+    """Real flow: invite into a unit, sign up, accept."""
+    response = inviter.post(TENANTS, json={"email": email, "unit_id": unit_id})
+    assert response.status_code == 201, response.get_json()
+    token = last_link_token(inviter.app)
+    tenant = sign_up(inviter.app, email, full_name)
+    accepted = tenant.post(f"{INVITATIONS}/accept", json={"token": token})
+    assert accepted.status_code == 200, accepted.get_json()
+    return tenant
+
+
+def tenant_id_of(viewer: Actor, email: str) -> str:
+    items = viewer.get(TENANTS).get_json()["items"]
+    return str(next(tenant["id"] for tenant in items if tenant["email"] == email))
