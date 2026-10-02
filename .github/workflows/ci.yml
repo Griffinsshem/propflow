@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: propflow
+          POSTGRES_PASSWORD: ci-ephemeral-password
+          POSTGRES_DB: propflow_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U propflow -d propflow_test"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      APP_ENV: test
+      DATABASE_URL: postgresql+psycopg://propflow:ci-ephemeral-password@localhost:5432/propflow_test
+      TEST_DATABASE_URL: postgresql+psycopg://propflow:ci-ephemeral-password@localhost:5432/propflow_test
+      REDIS_URL: redis://localhost:6379/0
+      CELERY_BROKER_URL: redis://localhost:6379/1
+      RATELIMIT_STORAGE_URI: redis://localhost:6379/2
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - name: Generate ephemeral secret
+        run: echo "SECRET_KEY=$(python -c 'import secrets;print(secrets.token_urlsafe(48))')" >> "$GITHUB_ENV"
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Lint
+        run: ruff format --check . && ruff check .
+      - name: Type-check
+        run: mypy app
+      - name: Static security analysis
+        run: bandit -c pyproject.toml -r app -q
+      - name: Dependency vulnerability audit
+        run: pip-audit -r requirements.txt
+      - name: Tests
+        run: pytest --cov=app --cov-report=term-missing
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Dependency vulnerability audit
+        run: npm audit --audit-level=high --omit=dev
+      - name: Type-check and build
+        run: npm run build
