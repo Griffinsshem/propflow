@@ -6,10 +6,10 @@ import uuid
 from typing import Any
 
 from flask import g, has_request_context, request
-from sqlalchemy import select, tuple_
+from sqlalchemy import select
 
 from app.audit.models import AuditLog
-from app.common.pagination import decode_cursor, encode_cursor
+from app.common.pagination import paginate
 from app.extensions import db
 
 # Detail keys containing any of these are dropped: secrets never enter the audit trail.
@@ -54,11 +54,6 @@ def list_for_organization(
     organization_id: uuid.UUID, *, limit: int, cursor: str | None
 ) -> tuple[list[AuditLog], str | None]:
     stmt = select(AuditLog).where(AuditLog.organization_id == organization_id)
-    if cursor:
-        created_at, entry_id = decode_cursor(cursor)
-        stmt = stmt.where(tuple_(AuditLog.created_at, AuditLog.id) < tuple_(created_at, entry_id))
-    stmt = stmt.order_by(AuditLog.created_at.desc(), AuditLog.id.desc()).limit(limit + 1)
-    rows = list(db.session.execute(stmt).scalars())
-    page = rows[:limit]
-    next_cursor = encode_cursor(page[-1].created_at, page[-1].id) if len(rows) > limit else None
-    return page, next_cursor
+    return paginate(
+        stmt, created_column=AuditLog.created_at, id_column=AuditLog.id, limit=limit, cursor=cursor
+    )

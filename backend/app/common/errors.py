@@ -112,3 +112,9 @@ class OrganizationContextError(AppError):
     status_code = 403
     code = "ORGANIZATION_CONTEXT_REQUIRED"
     message = "Select an organization you belong to before continuing."
+
+
+class InvitationEmailMismatchError(AppError):
+    status_code = 403
+    code = "INVITATION_EMAIL_MISMATCH"
+    message = "This invitation was sent to a different email address. Sign in with that address."

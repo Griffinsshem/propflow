@@ -15,7 +15,7 @@ from app.organizations import repository
 from app.organizations.models import MembershipRole, Organization, OrganizationMembership
 
 
-def _view(org: Organization, role: str) -> dict[str, Any]:
+def organization_view(org: Organization, role: str) -> dict[str, Any]:
     return {
         "id": org.id,
         "name": org.name,
@@ -42,7 +42,7 @@ def _organization(organization_id: uuid.UUID) -> Organization:
 
 def list_for_user(user_id: uuid.UUID) -> list[dict[str, Any]]:
     return [
-        _view(org, membership.role)
+        organization_view(org, membership.role)
         for membership, org in auth_repository.list_active_memberships(user_id)
     ]
 
@@ -65,12 +65,12 @@ def create(user: User, session: UserSession | None, name: str) -> dict[str, Any]
         details={"name": org.name},
     )
     db.session.commit()
-    return _view(org, MembershipRole.OWNER)
+    return organization_view(org, MembershipRole.OWNER)
 
 
 def get_for_member(user_id: uuid.UUID, organization_id: uuid.UUID) -> dict[str, Any]:
     membership = _membership_or_404(user_id, organization_id)
-    return _view(_organization(organization_id), membership.role)
+    return organization_view(_organization(organization_id), membership.role)
 
 
 def rename(user_id: uuid.UUID, organization_id: uuid.UUID, name: str) -> dict[str, Any]:
@@ -88,7 +88,7 @@ def rename(user_id: uuid.UUID, organization_id: uuid.UUID, name: str) -> dict[st
         details={"name": {"from": previous, "to": org.name}},
     )
     db.session.commit()
-    return _view(org, membership.role)
+    return organization_view(org, membership.role)
 
 
 def activate(
@@ -97,4 +97,4 @@ def activate(
     membership = _membership_or_404(user_id, organization_id)
     session.active_organization_id = organization_id
     db.session.commit()
-    return _view(_organization(organization_id), membership.role)
+    return organization_view(_organization(organization_id), membership.role)

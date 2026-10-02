@@ -6,10 +6,13 @@ import base64
 import binascii
 import uuid
 from datetime import datetime
+from typing import Any
 
 from marshmallow import Schema, fields, validate
+from sqlalchemy import Select, tuple_
 
 from app.common.errors import RequestValidationError
+from app.extensions import db
 
 DEFAULT_PAGE_SIZE = 25
 MAX_PAGE_SIZE = 100
@@ -39,3 +42,26 @@ def decode_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
     if created_at.tzinfo is None:
         raise RequestValidationError("Invalid pagination cursor.")
     return created_at, row_id
+
+
+def paginate(
+    stmt: Select[*tuple[Any, ...]],
+    *,
+    created_column: Any,
+    id_column: Any,
+    limit: int,
+    cursor: str | None,
+    scalars: bool = True,
+) -> tuple[list[Any], str | None]:
+    """Newest first. For multi-entity selects (scalars=False) the first entity owns the columns."""
+    if cursor:
+        created_at, row_id = decode_cursor(cursor)
+        stmt = stmt.where(tuple_(created_column, id_column) < tuple_(created_at, row_id))
+    stmt = stmt.order_by(created_column.desc(), id_column.desc()).limit(limit + 1)
+    result = db.session.execute(stmt)
+    rows: list[Any] = list(result.scalars()) if scalars else list(result.all())
+    page = rows[:limit]
+    if len(rows) <= limit:
+        return page, None
+    last = page[-1] if scalars else page[-1][0]
+    return page, encode_cursor(getattr(last, created_column.key), getattr(last, id_column.key))
