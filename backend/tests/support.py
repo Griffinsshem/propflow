@@ -110,3 +110,39 @@ def join_via_invitation(
     response = member.post(f"{INVITATIONS}/accept", json={"token": token})
     assert response.status_code == 200, response.get_json()
     return member
+
+
+PROPERTIES = "/api/v1/properties"
+UNITS = "/api/v1/units"
+
+
+def create_property(owner: Actor, name: str = "Riverside Court") -> dict[str, Any]:
+    payload = {
+        "name": name,
+        "property_type": "residential",
+        "address_line": "12 Riverside Drive",
+        "city": "Nairobi",
+    }
+    response = owner.post(PROPERTIES, json=payload)
+    assert response.status_code == 201, response.get_json()
+    return dict(response.get_json())
+
+
+def create_unit(
+    actor: Actor, property_id: str, label: str = "A101", **fields: Any
+) -> dict[str, Any]:
+    response = actor.post(UNITS, json={"property_id": property_id, "label": label} | fields)
+    assert response.status_code == 201, response.get_json()
+    return dict(response.get_json())
+
+
+def membership_id_of(owner: Actor, email: str) -> str:
+    items = owner.get(MEMBERS).get_json()["items"]
+    return str(next(member["id"] for member in items if member["email"] == email))
+
+
+def assign_manager(owner: Actor, property_id: str, membership_id: str) -> None:
+    response = owner.post(
+        f"{PROPERTIES}/{property_id}/managers", json={"membership_id": membership_id}
+    )
+    assert response.status_code == 200, response.get_json()
