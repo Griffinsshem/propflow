@@ -18,11 +18,12 @@ from app.authz.context import OrgContext
 from app.extensions import db
 from app.organizations.models import MembershipRole, OrganizationMembership
 from app.properties.models import Building, Property, PropertyAssignment, Unit
+from app.tenants.models import TenantProfile
 
 MAX_BUILDINGS_PER_PROPERTY_LIST = 200
 
 
-def _assigned_property_ids(context: OrgContext) -> Select[uuid.UUID]:
+def assigned_property_ids(context: OrgContext) -> Select[uuid.UUID]:
     return select(PropertyAssignment.property_id).where(
         PropertyAssignment.organization_id == context.organization_id,
         PropertyAssignment.membership_id == context.membership_id,
@@ -34,7 +35,7 @@ def visible_properties(context: OrgContext) -> Select[Property]:
     if context.role == MembershipRole.OWNER:
         return stmt
     if context.role == MembershipRole.MANAGER:
-        return stmt.where(Property.id.in_(_assigned_property_ids(context)))
+        return stmt.where(Property.id.in_(assigned_property_ids(context)))
     return stmt.where(false())
 
 
@@ -48,8 +49,14 @@ def visible_units(context: OrgContext) -> Select[Unit]:
     if context.role == MembershipRole.OWNER:
         return stmt
     if context.role == MembershipRole.MANAGER:
-        return stmt.where(Unit.property_id.in_(_assigned_property_ids(context)))
-    return stmt.where(false())  # tenants gain their own unit in Phase 6
+        return stmt.where(Unit.property_id.in_(assigned_property_ids(context)))
+    if context.role == MembershipRole.TENANT:
+        own_unit = select(TenantProfile.unit_id).where(
+            TenantProfile.organization_id == context.organization_id,
+            TenantProfile.membership_id == context.membership_id,
+        )
+        return stmt.where(Unit.id.in_(own_unit))
+    return stmt.where(false())
 
 
 def get_visible_unit(context: OrgContext, unit_id: uuid.UUID) -> Unit | None:

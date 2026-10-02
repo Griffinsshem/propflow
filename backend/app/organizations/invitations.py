@@ -19,6 +19,7 @@ from app.common.errors import (
     InvitationEmailMismatchError,
     NotFoundError,
     PermissionDeniedError,
+    RequestValidationError,
 )
 from app.common.links import frontend_link
 from app.common.pagination import paginate
@@ -33,6 +34,8 @@ from app.organizations.models import (
     OrganizationStatus,
 )
 from app.organizations.service import organization_view
+from app.properties import repository as properties_repository
+from app.tenants import service as tenancy
 
 INVITATION_TTL = timedelta(days=7)
 MAX_TOKEN_LENGTH = 128
@@ -42,10 +45,23 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
-def create(context: OrgContext, inviter: User, email: str, role: str) -> Invitation:
+def create(
+    context: OrgContext,
+    inviter: User,
+    email: str,
+    role: str,
+    *,
+    unit_id: uuid.UUID | None = None,
+) -> Invitation:
     target_role = MembershipRole(role)
     if not can_invite(context.role, target_role):
         raise PermissionDeniedError()
+    if unit_id is not None:
+        if target_role != MembershipRole.TENANT:
+            raise RequestValidationError("Only tenant invitations can include a unit.")
+        # 404 unless the inviter can see the unit (managers: assigned properties only).
+        if properties_repository.get_visible_unit(context, unit_id) is None:
+            raise NotFoundError()
     email = normalize_email(email)
     existing_user = auth_repository.get_user_by_email(email)
     if existing_user is not None and repository.get_active_membership(
@@ -64,6 +80,7 @@ def create(context: OrgContext, inviter: User, email: str, role: str) -> Invitat
         organization_id=context.organization_id,
         email=email,
         role=target_role,
+        unit_id=unit_id,
         token_hash=hash_token(token),
         invited_by_user_id=inviter.id,
         created_at=now,
@@ -76,7 +93,11 @@ def create(context: OrgContext, inviter: User, email: str, role: str) -> Invitat
         "invitation",
         invitation.id,
         organization_id=context.organization_id,
-        details={"email": email, "role": target_role.value},
+        details={
+            "email": email,
+            "role": target_role.value,
+            "unit_id": str(unit_id) if unit_id else None,
+        },
     )
     organization_name, inviter_name = organization.name, inviter.full_name
     db.session.commit()
@@ -178,6 +199,9 @@ def accept(user: User, session: UserSession, token: str) -> dict[str, Any]:
         membership.role = invitation.role
         membership.status = MembershipStatus.ACTIVE
     db.session.flush()
+
+    if invitation.role == MembershipRole.TENANT:
+        tenancy.place_tenant(organization.id, membership.id, invitation.unit_id)
 
     invitation.accepted_at = now
     invitation.accepted_by_user_id = user.id

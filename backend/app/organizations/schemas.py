@@ -31,6 +31,7 @@ class InvitationSchema(Schema):
     id = fields.UUID()
     email = fields.Email()
     role = fields.String()
+    unit_id = fields.UUID(allow_none=True)
     invited_by_user_id = fields.UUID()
     created_at = fields.DateTime()
     expires_at = fields.DateTime()

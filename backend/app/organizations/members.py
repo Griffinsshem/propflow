@@ -15,6 +15,7 @@ from app.common.pagination import paginate
 from app.extensions import db
 from app.organizations import repository
 from app.organizations.models import MembershipRole, MembershipStatus, OrganizationMembership
+from app.tenants import service as tenancy
 
 LAST_OWNER = "An organization must keep at least one active owner."
 
@@ -71,6 +72,11 @@ def change_role(context: OrgContext, membership_id: uuid.UUID, role: str) -> dic
             raise ConflictError(LAST_OWNER)
         previous = membership.role
         membership.role = new_role
+        # Tenancy follows the role: leaving the tenant role frees the unit.
+        if previous == MembershipRole.TENANT:
+            tenancy.release_membership(context.organization_id, membership.id)
+        if new_role == MembershipRole.TENANT:
+            tenancy.ensure_profile(context.organization_id, membership.id)
         audit.record(
             "membership.role_changed",
             "membership",
@@ -90,6 +96,8 @@ def deactivate(context: OrgContext, membership_id: uuid.UUID) -> dict[str, Any]:
         if _is_last_active_owner(context.organization_id, membership):
             raise ConflictError(LAST_OWNER)
         membership.status = MembershipStatus.DEACTIVATED
+        if membership.role == MembershipRole.TENANT:
+            tenancy.release_membership(context.organization_id, membership.id)
         audit.record(
             "membership.deactivated",
             "membership",

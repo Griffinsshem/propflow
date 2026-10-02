@@ -8,6 +8,7 @@ from app.organizations.invitation_routes import blp as invitations_blp
 from app.organizations.member_routes import blp as members_blp
 from app.organizations.routes import blp as organizations_blp
 from app.properties.routes import properties_blp, units_blp
+from app.tenants.routes import blp as tenants_blp
 
 
 def register_v1(api: Api) -> None:
@@ -18,6 +19,7 @@ def register_v1(api: Api) -> None:
         members_blp,
         properties_blp,
         units_blp,
+        tenants_blp,
         audit_blp,
     ):
         api.register_blueprint(blueprint)

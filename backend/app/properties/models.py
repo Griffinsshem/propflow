@@ -110,6 +110,7 @@ class Unit(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "units"
     __table_args__ = (
         UniqueConstraint("property_id", "label"),
+        UniqueConstraint("id", "organization_id"),  # composite-FK target for tenant integrity
         ForeignKeyConstraint(
             ["property_id", "organization_id"],
             ["properties.id", "properties.organization_id"],
