@@ -165,3 +165,28 @@ def place_tenant(inviter: Actor, email: str, unit_id: str, full_name: str = "Tes
 def tenant_id_of(viewer: Actor, email: str) -> str:
     items = viewer.get(TENANTS).get_json()["items"]
     return str(next(tenant["id"] for tenant in items if tenant["email"] == email))
+
+
+MAINTENANCE = "/api/v1/maintenance"
+
+
+def report_issue(actor: Actor, **fields: Any) -> dict[str, Any]:
+    payload = {
+        "category": "plumbing",
+        "title": "Leaking kitchen tap",
+        "description": "Water drips constantly under the sink.",
+    } | fields
+    response = actor.post(MAINTENANCE, json=payload)
+    assert response.status_code == 201, response.get_json()
+    return dict(response.get_json())
+
+
+def move_request(
+    actor: Actor, request_id: str, to_status: str, reason: str | None = None
+) -> TestResponse:
+    """Status change using the request's current version."""
+    current = actor.get(f"{MAINTENANCE}/{request_id}").get_json()
+    payload: dict[str, Any] = {"status": to_status, "version": current["version"]}
+    if reason is not None:
+        payload["reason"] = reason
+    return actor.post(f"{MAINTENANCE}/{request_id}/status", json=payload)
