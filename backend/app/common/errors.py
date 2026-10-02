@@ -104,3 +104,11 @@ def register_error_handlers(app: Flask) -> None:
     def _handle_unexpected(exc: Exception) -> tuple[Response, int]:
         logger.error("unhandled_exception", error_type=type(exc).__name__, exc_info=exc)
         return error_response(500, *_INTERNAL_ERROR)
+
+
+class OrganizationContextError(AppError):
+    """No valid organization context: none selected, membership removed, or org suspended."""
+
+    status_code = 403
+    code = "ORGANIZATION_CONTEXT_REQUIRED"
+    message = "Select an organization you belong to before continuing."

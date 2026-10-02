@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import structlog
 from flask import Flask, current_app, g, request
 
 from app.auth.service import resolve_session
@@ -25,6 +26,7 @@ def register_auth_middleware(app: Flask) -> None:
             resolved = resolve_session(token)
             if resolved is not None:
                 g.current_session, g.current_user = resolved
+                structlog.contextvars.bind_contextvars(user_id=str(g.current_user.id))
 
     @app.before_request
     def _verify_unsafe_request() -> None:

@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 
 from flask import current_app
 
+from app.audit import service as audit
 from app.auth import repository
 from app.auth.models import User
 from app.auth.passwords import hash_password
@@ -71,6 +72,7 @@ def reset_password(token: str, new_password: str) -> None:
     user.password_hash = hash_password(new_password)
     # Anyone holding an old session (possibly an attacker) is logged out.
     repository.revoke_all_sessions(user.id, datetime.now(UTC))
+    audit.record("auth.password_reset", "user", user.id, actor_user_id=user.id)
     db.session.commit()
 
 
