@@ -37,7 +37,9 @@ def test_unknown_route_returns_structured_404(client: FlaskClient) -> None:
     assert error["request_id"] == response.headers["X-Request-ID"]
 
 
-def test_unhandled_exception_hides_internal_details(app: Flask) -> None:
+def test_unhandled_exception_hides_internal_details(fresh_app: Flask) -> None:
+    app = fresh_app
+
     @app.get("/__boom")
     def boom() -> str:
         raise RuntimeError("db password is hunter2")
@@ -48,7 +50,9 @@ def test_unhandled_exception_hides_internal_details(app: Flask) -> None:
     assert response.get_json()["error"]["code"] == "INTERNAL_ERROR"
 
 
-def test_oversized_body_is_rejected(app: Flask) -> None:
+def test_oversized_body_is_rejected(fresh_app: Flask) -> None:
+    app = fresh_app
+
     @app.post("/__echo")
     def echo() -> dict[str, int]:
         return {"size": len(request.get_data())}

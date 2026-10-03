@@ -77,3 +77,11 @@ def test_production_requires_object_storage(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setenv("STORAGE_BACKEND", "memory")
     with pytest.raises(ConfigError, match="STORAGE_BACKEND"):
         build_config("production")
+
+
+def test_only_tests_relax_commit_durability(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("STORAGE_BACKEND", "memory")
+    assert "connect_args" not in build_config("development")["SQLALCHEMY_ENGINE_OPTIONS"]
+    assert build_config("test")["SQLALCHEMY_ENGINE_OPTIONS"]["connect_args"] == {
+        "options": "-c synchronous_commit=off"
+    }

@@ -108,6 +108,9 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
             "pool_size": _int_env("DB_POOL_SIZE", 5),
             "max_overflow": _int_env("DB_MAX_OVERFLOW", 5),
             "pool_recycle": 1800,
+            # Tests only: commits don't wait for the WAL flush. Correctness is unchanged
+            # (constraints, locks, transactions); only crash durability, irrelevant here.
+            **({"connect_args": {"options": "-c synchronous_commit=off"}} if is_test else {}),
         },
         "REDIS_URL": _require("REDIS_URL"),
         "FRONTEND_ORIGIN": frontend_origin,
