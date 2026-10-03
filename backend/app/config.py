@@ -16,6 +16,7 @@ MIN_SECRET_LENGTH = 32
 EMAIL_BACKENDS = frozenset({"console", "memory", "disabled"})
 # These backends print or retain message bodies, which contain account-recovery tokens.
 NON_PRODUCTION_EMAIL_BACKENDS = frozenset({"console", "memory"})
+STORAGE_BACKENDS = frozenset({"s3", "memory"})
 
 # Local convenience: load the repo-root .env if it exists.
 # override=False means real environment variables (Render, CI) always win.
@@ -76,6 +77,23 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
     if is_production and email_backend in NON_PRODUCTION_EMAIL_BACKENDS:
         raise ConfigError("EMAIL_BACKEND console/memory would expose tokens in production")
 
+    storage_backend = (
+        "memory" if is_test else os.environ.get("STORAGE_BACKEND", "s3").strip().lower()
+    )
+    if storage_backend not in STORAGE_BACKENDS:
+        raise ConfigError(f"STORAGE_BACKEND must be one of {sorted(STORAGE_BACKENDS)}")
+    if is_production and storage_backend != "s3":
+        raise ConfigError("STORAGE_BACKEND must be s3 in production")
+    storage_settings: dict[str, Any] = {}
+    if storage_backend == "s3":
+        storage_settings = {
+            "S3_ENDPOINT_URL": os.environ.get("S3_ENDPOINT_URL", "").strip() or None,
+            "S3_ACCESS_KEY_ID": _require("S3_ACCESS_KEY_ID"),
+            "S3_SECRET_ACCESS_KEY": _require("S3_SECRET_ACCESS_KEY"),
+            "S3_BUCKET": _require("S3_BUCKET"),
+            "S3_REGION": os.environ.get("S3_REGION", "auto").strip() or "auto",
+        }
+
     return {
         "APP_ENV": env,
         "TESTING": is_test,
@@ -110,6 +128,8 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
         # parameters keep the suite fast. Never use the test parameters in production.
         "ARGON2_PARAMS": {"time_cost": 1, "memory_cost": 1024, "parallelism": 1} if is_test else {},
         "EMAIL_BACKEND": email_backend,
+        "STORAGE_BACKEND": storage_backend,
+        **storage_settings,
         "MAIL_FROM": os.environ.get("MAIL_FROM", "no-reply@propflow.local"),
         # Rate limiting (ADR 0004). Off in tests unless a test opts in.
         "RATELIMIT_ENABLED": not is_test,

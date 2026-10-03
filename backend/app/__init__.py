@@ -19,6 +19,7 @@ from app.common.health import health_bp
 from app.common.logging import configure_logging
 from app.common.middleware import register_middleware
 from app.common.rate_limit import limiter
+from app.common.storage import init_storage
 from app.config import build_config
 from app.extensions import db, migrate
 
@@ -51,6 +52,7 @@ def create_app(app_env: str | None = None, overrides: Mapping[str, Any] | None =
         app.config["REDIS_URL"], socket_connect_timeout=1, socket_timeout=1
     )
     app.extensions["outbox"] = []  # only used by the "memory" email backend
+    init_storage(app)
     init_password_hasher(app)
 
     # Order matters: request IDs, then session loading, then CSRF, then rate limits

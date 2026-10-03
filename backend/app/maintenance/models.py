@@ -179,3 +179,54 @@ class MaintenanceComment(UUIDPrimaryKeyMixin, Base):
     author_membership_id: Mapped[uuid.UUID] = mapped_column(Uuid)
     body: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AttachmentStatus(StrEnum):
+    PENDING = "pending"
+    READY = "ready"
+    REJECTED = "rejected"
+
+
+class MaintenanceAttachment(UUIDPrimaryKeyMixin, Base):
+    """A photo on a maintenance request. Bytes live in object storage, never on the API server."""
+
+    __tablename__ = "maintenance_attachments"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["request_id", "organization_id"],
+            ["maintenance_requests.id", "maintenance_requests.organization_id"],
+            ondelete="RESTRICT",
+            name="fk_maintenance_attachments_request",
+        ),
+        ForeignKeyConstraint(
+            ["uploaded_by_membership_id", "organization_id"],
+            _MEMBERSHIP_KEY,
+            ondelete="RESTRICT",
+            name="fk_maintenance_attachments_uploader",
+        ),
+        CheckConstraint(enum_values_check("status", AttachmentStatus), name="status_valid"),
+        CheckConstraint(
+            "content_type IN ('image/jpeg', 'image/png', 'image/webp')", name="content_type_valid"
+        ),
+        CheckConstraint("(status = 'ready') = (storage_key IS NOT NULL)", name="ready_has_key"),
+        CheckConstraint(
+            "size_bytes IS NULL OR size_bytes BETWEEN 1 AND 10485760", name="size_bounds"
+        ),
+        Index("ix_maintenance_attachments_request", "request_id", "created_at"),
+    )
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="RESTRICT")
+    )
+    request_id: Mapped[uuid.UUID] = mapped_column(Uuid)
+    uploaded_by_membership_id: Mapped[uuid.UUID] = mapped_column(Uuid)
+    status: Mapped[str] = mapped_column(String(20))
+    content_type: Mapped[str] = mapped_column(String(50))
+    declared_size_bytes: Mapped[int] = mapped_column(Integer)
+    size_bytes: Mapped[int | None] = mapped_column(Integer)
+    width: Mapped[int | None] = mapped_column(Integer)
+    height: Mapped[int | None] = mapped_column(Integer)
+    storage_key: Mapped[str | None] = mapped_column(String(300))
+    rejection_reason: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    ready_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
