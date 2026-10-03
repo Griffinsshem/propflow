@@ -7,6 +7,10 @@ from app.config import ConfigError, build_config, normalize_database_url
 def production_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("FRONTEND_ORIGIN", "https://app.example.com")
     monkeypatch.setenv("EMAIL_BACKEND", "disabled")
+    monkeypatch.setenv("STORAGE_BACKEND", "s3")
+    monkeypatch.setenv("S3_ACCESS_KEY_ID", "test-key")
+    monkeypatch.setenv("S3_SECRET_ACCESS_KEY", "test-secret")
+    monkeypatch.setenv("S3_BUCKET", "test-bucket")
 
 
 @pytest.mark.parametrize(
@@ -66,3 +70,10 @@ def test_production_uses_host_prefixed_secure_cookies() -> None:
 @pytest.mark.usefixtures("production_env")
 def test_production_uses_full_strength_password_hashing() -> None:
     assert build_config("production")["ARGON2_PARAMS"] == {}
+
+
+@pytest.mark.usefixtures("production_env")
+def test_production_requires_object_storage(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("STORAGE_BACKEND", "memory")
+    with pytest.raises(ConfigError, match="STORAGE_BACKEND"):
+        build_config("production")

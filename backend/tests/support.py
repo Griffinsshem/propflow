@@ -190,3 +190,18 @@ def move_request(
     if reason is not None:
         payload["reason"] = reason
     return actor.post(f"{MAINTENANCE}/{request_id}/status", json=payload)
+
+
+def upload_image(
+    actor: Actor, request_id: str, data: bytes, content_type: str = "image/jpeg"
+) -> TestResponse:
+    """Full upload flow; writing to the memory store stands in for the browser's PUT."""
+    start = actor.post(
+        f"{MAINTENANCE}/{request_id}/attachments",
+        json={"content_type": content_type, "size_bytes": len(data)},
+    )
+    assert start.status_code == 201, start.get_json()
+    body = start.get_json()
+    key = body["upload"]["url"].removeprefix("memory://upload/")
+    actor.app.extensions["storage"].write(key, data, content_type)
+    return actor.post(f"{MAINTENANCE}/{request_id}/attachments/{body['attachment']['id']}/complete")
