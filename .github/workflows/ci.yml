@@ -44,7 +44,7 @@ jobs:
       CELERY_BROKER_URL: redis://localhost:6379/1
       RATELIMIT_STORAGE_URI: redis://localhost:6379/2
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -72,7 +72,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -91,7 +91,7 @@ jobs:
     name: Secret scan
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0  # scan the full history, not just the latest commit
       # The CLI scans the checked-out history directly: no GitHub API calls, so it works
