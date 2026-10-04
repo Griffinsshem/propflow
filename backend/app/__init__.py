@@ -22,6 +22,7 @@ from app.common.rate_limit import limiter
 from app.common.storage import init_storage
 from app.config import build_config
 from app.extensions import db, migrate
+from app.worker import init_celery
 
 MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
 
@@ -53,6 +54,7 @@ def create_app(app_env: str | None = None, overrides: Mapping[str, Any] | None =
     )
     app.extensions["outbox"] = []  # only used by the "memory" email backend
     init_storage(app)
+    init_celery(app)
     init_password_hasher(app)
 
     # Order matters: request IDs, then session loading, then CSRF, then rate limits

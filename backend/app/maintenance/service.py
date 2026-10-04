@@ -27,6 +27,7 @@ from app.maintenance.models import (
     MaintenanceStatusHistory,
 )
 from app.maintenance.repository import CommentRow, RequestRow
+from app.notifications import service as notifications
 from app.organizations.models import MembershipRole
 from app.properties import repository as properties_repository
 from app.properties.models import Unit
@@ -175,6 +176,7 @@ def create_request(context: OrgContext, data: dict[str, Any]) -> dict[str, Any]:
         organization_id=context.organization_id,
         details={"category": request.category, "priority": request.priority},
     )
+    notifications.notify_request_submitted(context, request)
     db.session.commit()
     return get_request(context, request.id)
 
@@ -286,6 +288,7 @@ def change_status(
         organization_id=context.organization_id,
         details={"from": previous, "to": to_status},
     )
+    notifications.notify_request_status(context, request)
     _commit()
     return get_request(context, request_id)
 
@@ -326,6 +329,7 @@ def add_comment(context: OrgContext, request_id: uuid.UUID, body: str) -> dict[s
         organization_id=context.organization_id,
         details={"comment_id": str(comment.id)},
     )
+    notifications.notify_request_comment(context, request)
     db.session.commit()
     row = repository.get_comment_row(context.organization_id, comment.id)
     if row is None:
@@ -371,3 +375,4 @@ def apply_linked_status(
         organization_id=context.organization_id,
         details={"from": previous, "to": to_status, "via": "work_order"},
     )
+    notifications.notify_request_status(context, request)

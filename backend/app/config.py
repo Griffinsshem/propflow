@@ -77,6 +77,14 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
     if is_production and email_backend in NON_PRODUCTION_EMAIL_BACKENDS:
         raise ConfigError("EMAIL_BACKEND console/memory would expose tokens in production")
 
+    email_delivery = (
+        "sync"
+        if is_test
+        else os.environ.get("EMAIL_DELIVERY", "async" if is_production else "sync").strip().lower()
+    )
+    if email_delivery not in {"sync", "async"}:
+        raise ConfigError("EMAIL_DELIVERY must be sync or async")
+
     storage_backend = (
         "memory" if is_test else os.environ.get("STORAGE_BACKEND", "s3").strip().lower()
     )
@@ -131,6 +139,23 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
         # parameters keep the suite fast. Never use the test parameters in production.
         "ARGON2_PARAMS": {"time_cost": 1, "memory_cost": 1024, "parallelism": 1} if is_test else {},
         "EMAIL_BACKEND": email_backend,
+        "EMAIL_DELIVERY": email_delivery,
+        # Celery: tasks are acknowledged only after they finish (crash = redelivery),
+        # one task prefetched at a time, JSON only, no result storage.
+        "CELERY": {
+            "broker_url": "memory://" if is_test else _require("CELERY_BROKER_URL"),
+            "task_ignore_result": True,
+            "task_acks_late": True,
+            "task_reject_on_worker_lost": True,
+            "worker_prefetch_multiplier": 1,
+            "task_serializer": "json",
+            "accept_content": ["json"],
+            "timezone": "UTC",
+            "broker_connection_retry_on_startup": True,
+            "broker_transport_options": {"visibility_timeout": 3600},
+            "task_always_eager": is_test,
+            "task_eager_propagates": is_test,
+        },
         "STORAGE_BACKEND": storage_backend,
         **storage_settings,
         "MAIL_FROM": os.environ.get("MAIL_FROM", "no-reply@propflow.local"),

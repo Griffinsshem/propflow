@@ -7,6 +7,7 @@ from app.auth.routes import blp as auth_blp
 from app.contractors.routes import blp as contractors_blp
 from app.maintenance.attachment_routes import blp as maintenance_attachments_blp
 from app.maintenance.routes import blp as maintenance_blp
+from app.notifications.routes import blp as notifications_blp
 from app.organizations.invitation_routes import blp as invitations_blp
 from app.organizations.member_routes import blp as members_blp
 from app.organizations.routes import blp as organizations_blp
@@ -28,6 +29,7 @@ def register_v1(api: Api) -> None:
         maintenance_attachments_blp,
         contractors_blp,
         work_orders_blp,
+        notifications_blp,
         audit_blp,
     ):
         api.register_blueprint(blueprint)

@@ -30,6 +30,7 @@ from app.maintenance import repository as maintenance_repository
 from app.maintenance import service as maintenance_service
 from app.maintenance.models import MaintenanceStatus
 from app.maintenance.workflow import InvalidStatusTransitionError
+from app.notifications import service as notifications
 from app.work_orders import repository, workflow
 from app.work_orders.models import (
     ACTIVE_STATUSES,
@@ -218,6 +219,7 @@ def create_work_order(context: OrgContext, data: dict[str, Any]) -> dict[str, An
         organization_id=context.organization_id,
         details={"request_id": str(request.id), "contractor_id": str(contractor.id)},
     )
+    notifications.notify_work_order_assigned(context, order, request)
     db.session.commit()
     return _reload(context, order.id)
 
@@ -279,6 +281,7 @@ def assign_contractor(
         organization_id=context.organization_id,
         details={"from": str(previous_contractor), "to": str(contractor.id)},
     )
+    notifications.notify_work_order_assigned(context, order, request)
     _commit()
     return _reload(context, work_order_id)
 
@@ -324,6 +327,7 @@ def change_status(
         organization_id=context.organization_id,
         details={"from": previous, "to": to_status},
     )
+    notifications.notify_work_order_status(context, order, request)
     _commit()
     return _reload(context, work_order_id)
 

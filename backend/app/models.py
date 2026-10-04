@@ -9,6 +9,7 @@ from app.maintenance.models import (
     MaintenanceRequest,
     MaintenanceStatusHistory,
 )
+from app.notifications.models import Notification
 from app.organizations.models import Invitation, Organization, OrganizationMembership
 from app.properties.models import Building, Property, PropertyAssignment, Unit
 from app.tenants.models import TenantProfile
@@ -23,6 +24,7 @@ __all__ = [
     "MaintenanceComment",
     "MaintenanceRequest",
     "MaintenanceStatusHistory",
+    "Notification",
     "Organization",
     "OrganizationMembership",
     "Property",
