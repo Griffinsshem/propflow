@@ -23,6 +23,8 @@ from app.common.errors import (
 )
 from app.common.links import frontend_link
 from app.common.pagination import paginate
+from app.contractors import repository as contractors_repository
+from app.contractors import service as contractors_service
 from app.extensions import db
 from app.notifications.email import EmailMessage, send_email
 from app.organizations import repository
@@ -52,6 +54,7 @@ def create(
     role: str,
     *,
     unit_id: uuid.UUID | None = None,
+    contractor_id: uuid.UUID | None = None,
 ) -> Invitation:
     target_role = MembershipRole(role)
     if not can_invite(context.role, target_role):
@@ -61,6 +64,11 @@ def create(
             raise RequestValidationError("Only tenant invitations can include a unit.")
         # 404 unless the inviter can see the unit (managers: assigned properties only).
         if properties_repository.get_visible_unit(context, unit_id) is None:
+            raise NotFoundError()
+    if contractor_id is not None:
+        if target_role != MembershipRole.CONTRACTOR:
+            raise RequestValidationError("Only contractor invitations can name a contractor.")
+        if contractors_repository.get_contractor(context.organization_id, contractor_id) is None:
             raise NotFoundError()
     email = normalize_email(email)
     existing_user = auth_repository.get_user_by_email(email)
@@ -81,6 +89,7 @@ def create(
         email=email,
         role=target_role,
         unit_id=unit_id,
+        contractor_id=contractor_id,
         token_hash=hash_token(token),
         invited_by_user_id=inviter.id,
         created_at=now,
@@ -202,6 +211,10 @@ def accept(user: User, session: UserSession, token: str) -> dict[str, Any]:
 
     if invitation.role == MembershipRole.TENANT:
         tenancy.place_tenant(organization.id, membership.id, invitation.unit_id)
+    if invitation.role == MembershipRole.CONTRACTOR and invitation.contractor_id is not None:
+        contractors_service.link_membership(
+            organization.id, invitation.contractor_id, membership.id
+        )
 
     invitation.accepted_at = now
     invitation.accepted_by_user_id = user.id

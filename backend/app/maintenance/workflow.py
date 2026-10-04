@@ -33,6 +33,8 @@ TRANSITIONS: Mapping[tuple[str, str], Transition] = MappingProxyType(
     {
         (S.SUBMITTED, S.TRIAGED): Transition(P.MAINTENANCE_UPDATE),
         (S.TRIAGED, S.ASSIGNED): Transition(P.MAINTENANCE_ASSIGN),
+        # Unassign: the contractor declined or the work order was cancelled.
+        (S.ASSIGNED, S.TRIAGED): Transition(P.MAINTENANCE_ASSIGN, reason_required=True),
         (S.ASSIGNED, S.IN_PROGRESS): Transition(P.MAINTENANCE_UPDATE),
         (S.IN_PROGRESS, S.WAITING): Transition(P.MAINTENANCE_UPDATE, reason_required=True),
         (S.WAITING, S.IN_PROGRESS): Transition(P.MAINTENANCE_UPDATE),

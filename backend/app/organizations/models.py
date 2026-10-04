@@ -98,6 +98,15 @@ class Invitation(UUIDPrimaryKeyMixin, Base):
             ondelete="RESTRICT",
             name="fk_invitations_unit",
         ),
+        CheckConstraint(
+            "contractor_id IS NULL OR role = 'contractor'", name="contractor_only_for_contractors"
+        ),
+        ForeignKeyConstraint(
+            ["contractor_id", "organization_id"],
+            ["contractors.id", "contractors.organization_id"],
+            ondelete="RESTRICT",
+            name="fk_invitations_contractor",
+        ),
         CheckConstraint("expires_at > created_at", name="expires_after_created"),
         CheckConstraint(
             "accepted_at IS NULL OR revoked_at IS NULL", name="not_accepted_and_revoked"
@@ -122,6 +131,8 @@ class Invitation(UUIDPrimaryKeyMixin, Base):
     role: Mapped[str] = mapped_column(String(20))
     # Tenant invitations carry the unit the tenant will occupy on acceptance.
     unit_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    # Contractor invitations can link the new login to a contractor record.
+    contractor_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     invited_by_user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT")

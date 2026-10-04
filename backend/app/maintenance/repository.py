@@ -4,7 +4,7 @@ Visibility rules (object-level authorization), in one place:
 - owner: every request in the organization
 - manager: requests in their assigned properties
 - tenant: only requests they reported themselves
-- contractor: none until work orders link them to requests (Phase 8)
+- contractor: requests behind work orders assigned to their contractor record
 """
 
 from __future__ import annotations
@@ -15,11 +15,13 @@ from sqlalchemy import Select, false, select
 
 from app.auth.models import User
 from app.authz.context import OrgContext
+from app.contractors.models import Contractor
 from app.extensions import db
 from app.maintenance.models import MaintenanceComment, MaintenanceRequest, MaintenanceStatusHistory
 from app.organizations.models import MembershipRole, OrganizationMembership
 from app.properties.models import Property, Unit
 from app.properties.repository import assigned_property_ids
+from app.work_orders.models import CONTRACTOR_VISIBLE_STATUSES, WorkOrder
 
 RequestRow = tuple[MaintenanceRequest, Property, Unit | None, User]
 RequestSelect = Select[MaintenanceRequest, Property, Unit, User]
@@ -41,6 +43,18 @@ def _request_rows(organization_id: uuid.UUID) -> RequestSelect:
     )
 
 
+def _contractor_request_ids(context: OrgContext) -> Select[uuid.UUID]:
+    return (
+        select(WorkOrder.request_id)
+        .join(Contractor, Contractor.id == WorkOrder.contractor_id)
+        .where(
+            WorkOrder.organization_id == context.organization_id,
+            Contractor.membership_id == context.membership_id,
+            WorkOrder.status.in_(CONTRACTOR_VISIBLE_STATUSES),
+        )
+    )
+
+
 def visible_requests(context: OrgContext) -> RequestSelect:
     stmt = _request_rows(context.organization_id)
     if context.role == MembershipRole.OWNER:
@@ -49,6 +63,8 @@ def visible_requests(context: OrgContext) -> RequestSelect:
         return stmt.where(MaintenanceRequest.property_id.in_(assigned_property_ids(context)))
     if context.role == MembershipRole.TENANT:
         return stmt.where(MaintenanceRequest.reported_by_membership_id == context.membership_id)
+    if context.role == MembershipRole.CONTRACTOR:
+        return stmt.where(MaintenanceRequest.id.in_(_contractor_request_ids(context)))
     return stmt.where(false())
 
 

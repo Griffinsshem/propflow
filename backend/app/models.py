@@ -2,6 +2,7 @@
 
 from app.audit.models import AuditLog
 from app.auth.models import User, UserSession
+from app.contractors.models import Contractor
 from app.maintenance.models import (
     MaintenanceAttachment,
     MaintenanceComment,
@@ -11,10 +12,12 @@ from app.maintenance.models import (
 from app.organizations.models import Invitation, Organization, OrganizationMembership
 from app.properties.models import Building, Property, PropertyAssignment, Unit
 from app.tenants.models import TenantProfile
+from app.work_orders.models import WorkOrder, WorkOrderStatusHistory
 
 __all__ = [
     "AuditLog",
     "Building",
+    "Contractor",
     "Invitation",
     "MaintenanceAttachment",
     "MaintenanceComment",
@@ -28,4 +31,6 @@ __all__ = [
     "Unit",
     "User",
     "UserSession",
+    "WorkOrder",
+    "WorkOrderStatusHistory",
 ]

@@ -76,6 +76,7 @@ _TENANT = frozenset(
 _CONTRACTOR = frozenset(
     {
         P.ORGANIZATION_READ,
+        P.MAINTENANCE_READ,
         P.WORKORDER_READ,
         P.WORKORDER_UPDATE,
         P.MAINTENANCE_COMMENT,

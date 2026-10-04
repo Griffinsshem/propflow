@@ -347,3 +347,27 @@ def list_comments(
         newest_first=False,  # a conversation reads oldest first
     )
     return [comment_view(tuple(row)) for row in rows], next_cursor
+
+
+def apply_linked_status(
+    request: MaintenanceRequest, to_status: str, context: OrgContext, reason: str | None
+) -> None:
+    """Moves a request as a consequence of an already-authorized work order action.
+
+    Validates against the request workflow but not the caller's maintenance permissions.
+    If the request has already moved elsewhere (e.g. a manager set it to WAITING), the
+    move is skipped: work orders never force a request into an invalid state.
+    The caller commits.
+    """
+    if request.status == to_status or workflow.get_transition(request.status, to_status) is None:
+        return
+    previous = request.status
+    request.status = to_status
+    _record_status(request, previous, to_status, context, reason)
+    audit.record(
+        "maintenance.status_changed",
+        "maintenance_request",
+        request.id,
+        organization_id=context.organization_id,
+        details={"from": previous, "to": to_status, "via": "work_order"},
+    )
