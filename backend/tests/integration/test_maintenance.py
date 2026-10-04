@@ -125,9 +125,11 @@ def test_manager_sees_only_requests_in_assigned_properties(site: Site) -> None:
     assert site.manager.get(url(hidden)).status_code == 404
 
 
-def test_contractors_cannot_read_requests_yet(site: Site) -> None:
+def test_contractors_see_no_requests_without_work_orders(site: Site) -> None:
     contractor = join_via_invitation(site.owner, "fixer@example.com", "contractor")
-    assert contractor.get(MAINTENANCE).status_code == 403
+    response = contractor.get(MAINTENANCE)
+    assert response.status_code == 200
+    assert response.get_json()["items"] == []
 
 
 # --- Workflow -------------------------------------------------------------------------------

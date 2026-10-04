@@ -205,3 +205,48 @@ def upload_image(
     key = body["upload"]["url"].removeprefix("memory://upload/")
     actor.app.extensions["storage"].write(key, data, content_type)
     return actor.post(f"{MAINTENANCE}/{request_id}/attachments/{body['attachment']['id']}/complete")
+
+
+CONTRACTORS = "/api/v1/contractors"
+WORK_ORDERS = "/api/v1/work-orders"
+
+
+def create_contractor(
+    actor: Actor, business_name: str = "Fixit Plumbing", **fields: Any
+) -> dict[str, Any]:
+    payload = {"business_name": business_name, "specialty": "plumbing"} | fields
+    response = actor.post(CONTRACTORS, json=payload)
+    assert response.status_code == 201, response.get_json()
+    return dict(response.get_json())
+
+
+def contractor_user(
+    inviter: Actor, contractor_id: str, email: str, full_name: str = "Test Contractor"
+) -> Actor:
+    """Real flow: invite a login for the contractor record, sign up, accept."""
+    response = inviter.post(f"{CONTRACTORS}/{contractor_id}/invite", json={"email": email})
+    assert response.status_code == 201, response.get_json()
+    token = last_link_token(inviter.app)
+    user = sign_up(inviter.app, email, full_name)
+    accepted = user.post(f"{INVITATIONS}/accept", json={"token": token})
+    assert accepted.status_code == 200, accepted.get_json()
+    return user
+
+
+def create_work_order(
+    actor: Actor, request_id: str, contractor_id: str, **fields: Any
+) -> dict[str, Any]:
+    payload = {"request_id": request_id, "contractor_id": contractor_id} | fields
+    response = actor.post(WORK_ORDERS, json=payload)
+    assert response.status_code == 201, response.get_json()
+    return dict(response.get_json())
+
+
+def move_work_order(
+    actor: Actor, work_order_id: str, to_status: str, reason: str | None = None
+) -> TestResponse:
+    current = actor.get(f"{WORK_ORDERS}/{work_order_id}").get_json()
+    payload: dict[str, Any] = {"status": to_status, "version": current["version"]}
+    if reason is not None:
+        payload["reason"] = reason
+    return actor.post(f"{WORK_ORDERS}/{work_order_id}/status", json=payload)

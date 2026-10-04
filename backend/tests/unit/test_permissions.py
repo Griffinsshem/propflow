@@ -50,6 +50,7 @@ def test_tenants_and_contractors_cannot_manage(
 def test_contractor_permissions_are_limited_to_work_orders() -> None:
     assert ROLE_PERMISSIONS[MembershipRole.CONTRACTOR] == {
         P.ORGANIZATION_READ,
+        P.MAINTENANCE_READ,
         P.WORKORDER_READ,
         P.WORKORDER_UPDATE,
         P.MAINTENANCE_COMMENT,
