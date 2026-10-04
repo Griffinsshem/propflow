@@ -6,6 +6,7 @@ pass through the API or the frontend proxy. Callers build keys only from server-
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any, Protocol, cast
 
 import boto3
@@ -31,6 +32,7 @@ class ObjectStorage(Protocol):
     def read(self, key: str, max_bytes: int) -> bytes: ...
     def write(self, key: str, data: bytes, content_type: str) -> None: ...
     def delete(self, key: str) -> None: ...
+    def list_objects(self, prefix: str, max_keys: int) -> list[tuple[str, datetime]]: ...
 
 
 class S3Storage:
@@ -106,12 +108,26 @@ class S3Storage:
         except (BotoCoreError, ClientError) as exc:
             raise StorageUnavailableError() from exc
 
+    def list_objects(self, prefix: str, max_keys: int) -> list[tuple[str, datetime]]:
+        try:
+            paginator = self._client.get_paginator("list_objects_v2")
+            found: list[tuple[str, datetime]] = []
+            pages = paginator.paginate(
+                Bucket=self._bucket, Prefix=prefix, PaginationConfig={"MaxItems": max_keys}
+            )
+            for page in pages:
+                found += [(item["Key"], item["LastModified"]) for item in page.get("Contents", [])]
+            return found
+        except (BotoCoreError, ClientError) as exc:
+            raise StorageUnavailableError() from exc
+
 
 class MemoryStorage:
     """Tests only. Not shared between processes, so useless for a real server."""
 
     def __init__(self) -> None:
         self.objects: dict[str, tuple[bytes, str]] = {}
+        self.modified: dict[str, datetime] = {}
 
     def presigned_put(self, key: str, content_type: str, expires_in: int) -> str:
         return f"memory://upload/{key}"
@@ -128,9 +144,15 @@ class MemoryStorage:
 
     def write(self, key: str, data: bytes, content_type: str) -> None:
         self.objects[key] = (data, content_type)
+        self.modified[key] = datetime.now(UTC)
 
     def delete(self, key: str) -> None:
         self.objects.pop(key, None)
+        self.modified.pop(key, None)
+
+    def list_objects(self, prefix: str, max_keys: int) -> list[tuple[str, datetime]]:
+        keys = sorted(key for key in self.objects if key.startswith(prefix))[:max_keys]
+        return [(key, self.modified[key]) for key in keys]
 
 
 def init_storage(app: Flask) -> None:

@@ -21,6 +21,7 @@ class AttachmentSchema(Schema):
     size_bytes = fields.Integer(allow_none=True)
     width = fields.Integer(allow_none=True)
     height = fields.Integer(allow_none=True)
+    rejection_reason = fields.String(allow_none=True)
     uploaded_by_membership_id = fields.UUID()
     created_at = fields.DateTime()
     ready_at = fields.DateTime(allow_none=True)

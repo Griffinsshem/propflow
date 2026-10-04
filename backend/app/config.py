@@ -77,13 +77,15 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
     if is_production and email_backend in NON_PRODUCTION_EMAIL_BACKENDS:
         raise ConfigError("EMAIL_BACKEND console/memory would expose tokens in production")
 
-    email_delivery = (
+    background_tasks = (
         "sync"
         if is_test
-        else os.environ.get("EMAIL_DELIVERY", "async" if is_production else "sync").strip().lower()
+        else os.environ.get("BACKGROUND_TASKS", "async" if is_production else "sync")
+        .strip()
+        .lower()
     )
-    if email_delivery not in {"sync", "async"}:
-        raise ConfigError("EMAIL_DELIVERY must be sync or async")
+    if background_tasks not in {"sync", "async"}:
+        raise ConfigError("BACKGROUND_TASKS must be sync or async")
 
     storage_backend = (
         "memory" if is_test else os.environ.get("STORAGE_BACKEND", "s3").strip().lower()
@@ -139,7 +141,7 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
         # parameters keep the suite fast. Never use the test parameters in production.
         "ARGON2_PARAMS": {"time_cost": 1, "memory_cost": 1024, "parallelism": 1} if is_test else {},
         "EMAIL_BACKEND": email_backend,
-        "EMAIL_DELIVERY": email_delivery,
+        "BACKGROUND_TASKS": background_tasks,
         # Celery: tasks are acknowledged only after they finish (crash = redelivery),
         # one task prefetched at a time, JSON only, no result storage.
         "CELERY": {
@@ -155,6 +157,27 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
             "broker_transport_options": {"visibility_timeout": 3600},
             "task_always_eager": is_test,
             "task_eager_propagates": is_test,
+            # Keep structured log levels honest: don't relabel worker stdout as WARNING.
+            "worker_redirect_stdouts": False,
+            # Exactly one beat process should run; jobs are idempotent if two ever do.
+            "beat_schedule": {
+                "recover-unfinished-uploads": {
+                    "task": "housekeeping.recover_unfinished_uploads",
+                    "schedule": 15 * 60,
+                },
+                "purge-expired-sessions": {
+                    "task": "housekeeping.purge_expired_sessions",
+                    "schedule": 24 * 3600,
+                },
+                "purge-old-notifications": {
+                    "task": "housekeeping.purge_old_notifications",
+                    "schedule": 24 * 3600,
+                },
+                "remove-orphaned-objects": {
+                    "task": "housekeeping.remove_orphaned_objects",
+                    "schedule": 24 * 3600,
+                },
+            },
         },
         "STORAGE_BACKEND": storage_backend,
         **storage_settings,

@@ -25,3 +25,6 @@ out/
 .idea/
 .vscode/
 *.log
+
+# Celery beat local schedule state
+celerybeat-schedule*

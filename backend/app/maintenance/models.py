@@ -18,6 +18,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Uuid,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -183,6 +184,7 @@ class MaintenanceComment(UUIDPrimaryKeyMixin, Base):
 
 class AttachmentStatus(StrEnum):
     PENDING = "pending"
+    PROCESSING = "processing"
     READY = "ready"
     REJECTED = "rejected"
 
@@ -213,6 +215,12 @@ class MaintenanceAttachment(UUIDPrimaryKeyMixin, Base):
             "size_bytes IS NULL OR size_bytes BETWEEN 1 AND 10485760", name="size_bounds"
         ),
         Index("ix_maintenance_attachments_request", "request_id", "created_at"),
+        # Serves housekeeping: find uploads that never finished.
+        Index(
+            "ix_maintenance_attachments_unfinished",
+            "created_at",
+            postgresql_where=text("status IN ('pending', 'processing')"),
+        ),
     )
 
     organization_id: Mapped[uuid.UUID] = mapped_column(

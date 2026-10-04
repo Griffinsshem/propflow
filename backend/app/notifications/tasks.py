@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-import structlog
 from celery import shared_task
 
 from app.notifications.email import EmailMessage, EmailTransportError, deliver_now
+from app.worker import bind_task_context
 
 
 @shared_task(
@@ -23,8 +23,5 @@ from app.notifications.email import EmailMessage, EmailTransportError, deliver_n
 def deliver_email(
     self: Any, to: str, subject: str, body: str, request_id: str | None = None
 ) -> None:
-    # The originating request ID ties API logs and worker logs together.
-    structlog.contextvars.bind_contextvars(
-        request_id=request_id, task_id=self.request.id, task=self.name
-    )
+    bind_task_context(self, request_id)
     deliver_now(EmailMessage(to=to, subject=subject, body=body))

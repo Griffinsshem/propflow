@@ -49,7 +49,14 @@ def start_upload(payload: dict[str, Any], request_id: uuid.UUID) -> dict[str, An
 
 @blp.post("/<uuid:request_id>/attachments/<uuid:attachment_id>/complete")
 @limiter.limit("60 per hour", key_func=client_key)
-@blp.response(200, AttachmentSchema)
+@blp.response(202, AttachmentSchema)
 @require_permission(Permission.MAINTENANCE_COMMENT)
 def complete_upload(request_id: uuid.UUID, attachment_id: uuid.UUID) -> dict[str, Any]:
     return attachments.complete_upload(current_org_context(), request_id, attachment_id)
+
+
+@blp.get("/<uuid:request_id>/attachments/<uuid:attachment_id>")
+@blp.response(200, AttachmentSchema)
+@require_permission(Permission.MAINTENANCE_READ)
+def get_attachment(request_id: uuid.UUID, attachment_id: uuid.UUID) -> dict[str, Any]:
+    return attachments.get_attachment(current_org_context(), request_id, attachment_id)
