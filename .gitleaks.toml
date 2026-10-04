@@ -1,0 +1,10 @@
+# Secret scanning configuration (gitleaks). Default rules plus a narrow allowlist.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Deliberate, non-secret placeholders: test fixtures and the throwaway CI database."
+paths = [
+  '''backend/tests/''',
+  '''\.github/workflows/ci\.yml''',
+]

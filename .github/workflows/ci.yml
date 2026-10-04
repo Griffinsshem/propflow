@@ -86,3 +86,14 @@ jobs:
         run: npm audit --audit-level=high --omit=dev
       - name: Type-check and build
         run: npm run build
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # scan the full history, not just the latest commit
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
