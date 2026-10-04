@@ -93,6 +93,8 @@ class MaintenanceRequest(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "ix_maintenance_requests_property_status", "organization_id", "property_id", "status"
         ),
         Index("ix_maintenance_requests_reporter", "organization_id", "reported_by_membership_id"),
+        # Serves the dashboard's 'recently updated requests'.
+        Index("ix_maintenance_requests_org_updated", "organization_id", "updated_at"),
     )
 
     organization_id: Mapped[uuid.UUID] = mapped_column(

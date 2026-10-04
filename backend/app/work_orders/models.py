@@ -81,6 +81,13 @@ class WorkOrder(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_work_orders_org_created", "organization_id", "created_at", "id"),
         Index("ix_work_orders_contractor_status", "organization_id", "contractor_id", "status"),
         Index("ix_work_orders_request", "organization_id", "request_id"),
+        # Serves overdue and upcoming work orders (active ones only).
+        Index(
+            "ix_work_orders_active_due",
+            "organization_id",
+            "due_date",
+            postgresql_where=text("status IN ('assigned', 'accepted', 'in_progress')"),
+        ),
     )
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
