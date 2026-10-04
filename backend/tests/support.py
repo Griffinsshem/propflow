@@ -250,3 +250,12 @@ def move_work_order(
     if reason is not None:
         payload["reason"] = reason
     return actor.post(f"{WORK_ORDERS}/{work_order_id}/status", json=payload)
+
+
+NOTIFICATIONS = "/api/v1/notifications"
+
+
+def notifications_of(actor: Actor, **query: Any) -> list[dict[str, Any]]:
+    response = actor.get(NOTIFICATIONS, query_string=query)
+    assert response.status_code == 200, response.get_json()
+    return list(response.get_json()["items"])

@@ -103,3 +103,12 @@ def two_orgs(app: Flask) -> TwoOrgs:
     b_owner = sign_up(app, "owner.b@example.com", "Owner B")
     org_b = create_organization(b_owner, "Org B")
     return TwoOrgs(app=app, a_owner=a_owner, b_owner=b_owner, org_a=org_a, org_b=org_b)
+
+
+@pytest.fixture()
+def async_email_app(migrated_database: None) -> Iterator[Flask]:
+    """Email goes through Celery (eager in tests): exercises the async delivery wiring."""
+    application = create_app("test", overrides={"EMAIL_DELIVERY": "async"})
+    yield application
+    _reset_state(application)
+    _dispose(application)
