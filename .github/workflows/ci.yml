@@ -94,6 +94,9 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0  # scan the full history, not just the latest commit
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # The CLI scans the checked-out history directly: no GitHub API calls, so it works
+      # identically for pushes, pull requests and Dependabot's restricted tokens.
+      - name: Scan git history for secrets
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.18.4 \
+            detect --source /repo --config /repo/.gitleaks.toml --redact --verbose
