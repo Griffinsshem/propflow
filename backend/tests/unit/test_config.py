@@ -85,3 +85,21 @@ def test_only_tests_relax_commit_durability(monkeypatch: pytest.MonkeyPatch) -> 
     assert build_config("test")["SQLALCHEMY_ENGINE_OPTIONS"]["connect_args"] == {
         "options": "-c synchronous_commit=off"
     }
+
+
+@pytest.mark.usefixtures("production_env")
+def test_trusting_proxy_headers_requires_a_strong_proxy_secret(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TRUSTED_PROXY_COUNT", "2")
+    monkeypatch.delenv("PROXY_SHARED_SECRET", raising=False)
+    with pytest.raises(ConfigError, match="PROXY_SHARED_SECRET"):
+        build_config("production")
+    monkeypatch.setenv("PROXY_SHARED_SECRET", "x" * 40)
+    assert build_config("production")["PROXY_SHARED_SECRET"] == "x" * 40
+
+
+@pytest.mark.usefixtures("production_env")
+def test_hsts_is_enabled_only_in_production() -> None:
+    assert build_config("production")["HSTS_ENABLED"] is True
+    assert build_config("test")["HSTS_ENABLED"] is False

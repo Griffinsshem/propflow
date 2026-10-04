@@ -77,6 +77,13 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
     if is_production and email_backend in NON_PRODUCTION_EMAIL_BACKENDS:
         raise ConfigError("EMAIL_BACKEND console/memory would expose tokens in production")
 
+    proxy_secret = os.environ.get("PROXY_SHARED_SECRET", "").strip() or None
+    trusts_proxy_headers = is_production and _int_env("TRUSTED_PROXY_COUNT", 0) > 0
+    if trusts_proxy_headers and (proxy_secret is None or len(proxy_secret) < MIN_SECRET_LENGTH):
+        raise ConfigError(
+            "PROXY_SHARED_SECRET (32+ characters) is required when trusting proxy headers"
+        )
+
     background_tasks = (
         "sync"
         if is_test
@@ -126,6 +133,10 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
         "FRONTEND_ORIGIN": frontend_origin,
         # Number of reverse-proxy hops to trust for the client IP (0 = trust none).
         "TRUSTED_PROXY_COUNT": _int_env("TRUSTED_PROXY_COUNT", 0),
+        # When set, /api requests must carry X-Proxy-Secret: only our frontend proxy knows it,
+        # so requests that bypass it (and could spoof X-Forwarded-For) are refused.
+        "PROXY_SHARED_SECRET": proxy_secret,
+        "HSTS_ENABLED": is_production,
         # Sessions: opaque server-side tokens in HttpOnly cookies (ADR 0003).
         # The __Host- prefix forces Secure, Path=/ and no Domain: blocks subdomain cookie injection.
         "AUTH_SESSION_COOKIE": "__Host-propflow_session" if is_production else "propflow_session",
