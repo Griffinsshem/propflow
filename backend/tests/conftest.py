@@ -108,7 +108,7 @@ def two_orgs(app: Flask) -> TwoOrgs:
 @pytest.fixture()
 def async_email_app(migrated_database: None) -> Iterator[Flask]:
     """Email goes through Celery (eager in tests): exercises the async delivery wiring."""
-    application = create_app("test", overrides={"EMAIL_DELIVERY": "async"})
+    application = create_app("test", overrides={"BACKGROUND_TASKS": "async"})
     yield application
     _reset_state(application)
     _dispose(application)

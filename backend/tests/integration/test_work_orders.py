@@ -111,7 +111,7 @@ def test_contractor_can_read_discuss_and_document_the_linked_request(yard: Yard)
     assert yard.fixer.get(base).status_code == 200
     comment = yard.fixer.post(f"{base}/comments", json={"body": "Arriving at 10am."})
     assert comment.status_code == 201
-    assert upload_image(yard.fixer, yard.request["id"], jpeg()).status_code == 200
+    assert upload_image(yard.fixer, yard.request["id"], jpeg()).get_json()["status"] == "ready"
     unrelated = report_issue(yard.tenant, title="Broken window latch")
     assert yard.fixer.get(f"{MAINTENANCE}/{unrelated['id']}").status_code == 404
     visible = {item["id"] for item in yard.fixer.get(MAINTENANCE).get_json()["items"]}

@@ -13,7 +13,7 @@ Accepted (image processing and scheduled cleanup move to the worker in Phase 9b)
   context, are thin wrappers over tested functions, carry the originating request ID into
   worker logs, use `acks_late` + `reject_on_worker_lost` (a crashed task is redelivered),
   prefetch 1, JSON only, no result backend.
-- **Email** is sent after commit; `EMAIL_DELIVERY=async` (production default) enqueues a
+- **Email** is sent after commit; `BACKGROUND_TASKS=async` (production default) enqueues a
   task with exponential-backoff retries for transient transport errors. Tests and local
   development default to `sync`. A broker outage is logged and never fails the user's
   request.

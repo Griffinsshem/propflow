@@ -1,11 +1,12 @@
 import io
+import uuid
 from dataclasses import dataclass
 from typing import Any
 
 import pytest
 from flask import Flask
 from PIL import Image
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.common.storage import MemoryStorage, StorageUnavailableError
 from app.extensions import db
@@ -66,28 +67,33 @@ def final_bytes(scene: Scene) -> bytes:
     return finals[0]
 
 
-def attachments_url(request: dict[str, Any]) -> str:
+def base(request: dict[str, Any]) -> str:
     return f"{MAINTENANCE}/{request['id']}/attachments"
 
 
-def test_tenant_photo_becomes_ready_and_is_listed_with_a_signed_link(scene: Scene) -> None:
+def start(
+    actor: Actor, request: dict[str, Any], content_type: str = "image/jpeg"
+) -> dict[str, Any]:
+    response = actor.post(base(request), json={"content_type": content_type, "size_bytes": 100})
+    assert response.status_code == 201, response.get_json()
+    return dict(response.get_json())
+
+
+def test_photo_is_processed_to_ready_and_listed_with_a_signed_link(scene: Scene) -> None:
     request = report_issue(scene.tenant)
     response = upload_image(scene.tenant, request["id"], jpeg())
-    assert response.status_code == 200
+    assert response.status_code == 202
     attachment = response.get_json()
     assert attachment["status"] == "ready"
     assert (attachment["width"], attachment["height"]) == (64, 48)
-    listed = scene.manager.get(attachments_url(request)).get_json()
+    listed = scene.manager.get(base(request)).get_json()
     assert [item["id"] for item in listed] == [attachment["id"]]
     assert listed[0]["download_url"].startswith("memory://download/orgs/")
     assert not [key for key in stored(scene).objects if key.startswith("pending/")]
 
 
 def test_upload_instructions_are_short_lived_and_bound_to_the_content_type(scene: Scene) -> None:
-    request = report_issue(scene.tenant)
-    body = scene.tenant.post(
-        attachments_url(request), json={"content_type": "image/png", "size_bytes": 100}
-    ).get_json()
+    body = start(scene.tenant, report_issue(scene.tenant), "image/png")
     assert body["upload"]["method"] == "PUT"
     assert body["upload"]["headers"] == {"Content-Type": "image/png"}
     assert body["upload"]["expires_in"] <= 300
@@ -98,7 +104,7 @@ def test_photo_metadata_is_stripped(scene: Scene) -> None:
     exif = Image.Exif()
     exif[0x0110] = "SecretCam 3000"  # camera model tag, standing in for GPS data
     request = report_issue(scene.tenant)
-    assert upload_image(scene.tenant, request["id"], jpeg(exif=exif.tobytes())).status_code == 200
+    upload_image(scene.tenant, request["id"], jpeg(exif=exif.tobytes()))
     data = final_bytes(scene)
     assert b"SecretCam" not in data
     assert 0x0110 not in Image.open(io.BytesIO(data)).getexif()
@@ -106,29 +112,32 @@ def test_photo_metadata_is_stripped(scene: Scene) -> None:
 
 def test_payloads_appended_to_images_are_discarded(scene: Scene) -> None:
     request = report_issue(scene.tenant)
-    polyglot = jpeg() + b"<script>alert(1)</script>"
-    assert upload_image(scene.tenant, request["id"], polyglot).status_code == 200
+    upload_image(scene.tenant, request["id"], jpeg() + b"<script>alert(1)</script>")
     assert b"<script>" not in final_bytes(scene)
 
 
-def test_content_must_match_the_declared_type(scene: Scene) -> None:
+@pytest.mark.parametrize(
+    ("data", "content_type"),
+    [
+        (b"%PDF-1.7 definitely not an image", "image/jpeg"),
+        (None, "image/png"),  # a real JPEG declared as PNG
+    ],
+)
+def test_bad_files_are_rejected_with_a_reason_and_deleted(
+    scene: Scene, data: bytes | None, content_type: str
+) -> None:
     request = report_issue(scene.tenant)
-    response = upload_image(scene.tenant, request["id"], jpeg(), content_type="image/png")
-    assert response.status_code == 422
-    assert scene.tenant.get(attachments_url(request)).get_json() == []
-
-
-def test_non_images_are_rejected_and_deleted(scene: Scene) -> None:
-    request = report_issue(scene.tenant)
-    response = upload_image(scene.tenant, request["id"], b"%PDF-1.7 definitely not an image")
-    assert response.status_code == 422
+    result = upload_image(scene.tenant, request["id"], data or jpeg(), content_type).get_json()
+    assert result["status"] == "rejected"
+    assert result["rejection_reason"]
     assert stored(scene).objects == {}
+    assert scene.tenant.get(base(request)).get_json() == []
 
 
 def test_oversized_dimensions_are_rejected(scene: Scene, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(images, "MAX_PIXELS", 1000)
     request = report_issue(scene.tenant)
-    assert upload_image(scene.tenant, request["id"], jpeg(64, 48)).status_code == 422
+    assert upload_image(scene.tenant, request["id"], jpeg()).get_json()["status"] == "rejected"
 
 
 @pytest.mark.parametrize(
@@ -142,39 +151,49 @@ def test_oversized_dimensions_are_rejected(scene: Scene, monkeypatch: pytest.Mon
 )
 def test_upload_requests_are_validated(scene: Scene, payload: dict[str, Any]) -> None:
     request = report_issue(scene.tenant)
-    assert scene.tenant.post(attachments_url(request), json=payload).status_code == 422
+    assert scene.tenant.post(base(request), json=payload).status_code == 422
 
 
 def test_completing_before_uploading_is_a_conflict(scene: Scene) -> None:
     request = report_issue(scene.tenant)
-    body = scene.tenant.post(
-        attachments_url(request), json={"content_type": "image/jpeg", "size_bytes": 100}
-    ).get_json()
-    response = scene.tenant.post(f"{attachments_url(request)}/{body['attachment']['id']}/complete")
+    body = start(scene.tenant, request)
+    response = scene.tenant.post(f"{base(request)}/{body['attachment']['id']}/complete")
     assert response.status_code == 409
 
 
-def test_only_the_uploader_can_complete_an_upload(scene: Scene) -> None:
+def test_only_the_uploader_can_complete_or_poll_an_unfinished_upload(scene: Scene) -> None:
     request = report_issue(scene.tenant)
-    body = scene.tenant.post(
-        attachments_url(request), json={"content_type": "image/jpeg", "size_bytes": 100}
-    ).get_json()
-    response = scene.manager.post(f"{attachments_url(request)}/{body['attachment']['id']}/complete")
-    assert response.status_code == 404
+    attachment_id = start(scene.tenant, request)["attachment"]["id"]
+    assert scene.manager.post(f"{base(request)}/{attachment_id}/complete").status_code == 404
+    assert scene.manager.get(f"{base(request)}/{attachment_id}").status_code == 404
+    polled = scene.tenant.get(f"{base(request)}/{attachment_id}")
+    assert polled.status_code == 200
+    assert polled.get_json()["status"] == "pending"
+
+
+def test_ready_photos_are_visible_to_everyone_who_sees_the_request(scene: Scene) -> None:
+    request = report_issue(scene.tenant)
+    attachment = upload_image(scene.tenant, request["id"], jpeg()).get_json()
+    seen = scene.manager.get(f"{base(request)}/{attachment['id']}").get_json()
+    assert seen["status"] == "ready"
+    assert seen["download_url"]
 
 
 def test_attachment_count_is_limited(scene: Scene, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(attachments, "MAX_ATTACHMENTS_PER_REQUEST", 1)
     request = report_issue(scene.tenant)
-    payload = {"content_type": "image/jpeg", "size_bytes": 100}
-    assert scene.tenant.post(attachments_url(request), json=payload).status_code == 201
-    assert scene.tenant.post(attachments_url(request), json=payload).status_code == 409
+    start(scene.tenant, request)
+    response = scene.tenant.post(
+        base(request), json={"content_type": "image/jpeg", "size_bytes": 1}
+    )
+    assert response.status_code == 409
 
 
 def test_other_tenants_cannot_see_attachments(scene: Scene) -> None:
     request = report_issue(scene.tenant)
-    upload_image(scene.tenant, request["id"], jpeg())
-    assert scene.neighbour.get(attachments_url(request)).status_code == 404
+    attachment = upload_image(scene.tenant, request["id"], jpeg()).get_json()
+    assert scene.neighbour.get(base(request)).status_code == 404
+    assert scene.neighbour.get(f"{base(request)}/{attachment['id']}").status_code == 404
 
 
 class _UnreachableStorage(MemoryStorage):
@@ -184,13 +203,36 @@ class _UnreachableStorage(MemoryStorage):
 
 def test_storage_outage_fails_clearly_and_leaves_the_upload_pending(scene: Scene) -> None:
     request = report_issue(scene.tenant)
-    body = scene.tenant.post(
-        attachments_url(request), json={"content_type": "image/jpeg", "size_bytes": 100}
-    ).get_json()
+    attachment_id = start(scene.tenant, request)["attachment"]["id"]
     scene.app.extensions["storage"] = _UnreachableStorage()
-    response = scene.tenant.post(f"{attachments_url(request)}/{body['attachment']['id']}/complete")
+    response = scene.tenant.post(f"{base(request)}/{attachment_id}/complete")
     assert response.status_code == 503
     assert response.get_json()["error"]["code"] == "STORAGE_UNAVAILABLE"
     with scene.app.app_context():
-        status = db.session.execute(select(MaintenanceAttachment.status)).scalar_one()
-    assert status == "pending"
+        assert db.session.execute(select(MaintenanceAttachment.status)).scalar_one() == "pending"
+
+
+def test_processing_is_idempotent_when_a_job_is_redelivered(scene: Scene) -> None:
+    request = report_issue(scene.tenant)
+    attachment = upload_image(scene.tenant, request["id"], jpeg()).get_json()
+    with scene.app.app_context():
+        attachments.process_attachment(
+            uuid.UUID(attachment["id"]),
+            db.session.execute(select(MaintenanceAttachment.organization_id)).scalar_one(),
+        )
+        assert db.session.execute(select(MaintenanceAttachment.status)).scalar_one() == "ready"
+    assert len([k for k in stored(scene).objects if k.startswith("orgs/")]) == 1
+
+
+def test_a_crash_after_writing_the_result_is_recovered(scene: Scene) -> None:
+    """The worker wrote the final image and deleted the original, then died before commit."""
+    request = report_issue(scene.tenant)
+    body = start(scene.tenant, request)
+    with scene.app.app_context():
+        attachment = db.session.execute(select(MaintenanceAttachment)).scalar_one()
+        stored(scene).write(attachments.final_key(attachment), jpeg(), "image/jpeg")
+        db.session.execute(update(MaintenanceAttachment).values(status="processing"))
+        db.session.commit()
+        attachments.process_attachment(attachment.id, attachment.organization_id)
+    polled = scene.tenant.get(f"{base(request)}/{body['attachment']['id']}").get_json()
+    assert polled["status"] == "ready"
