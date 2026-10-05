@@ -10,6 +10,7 @@ Visibility rules (object-level authorization), in one place:
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 
 from sqlalchemy import ColumnElement, Select, and_, false, select
 
@@ -142,3 +143,16 @@ def get_comment_row(organization_id: uuid.UUID, comment_id: uuid.UUID) -> Commen
     )
     row = db.session.execute(stmt).first()
     return (row[0], row[1], row[2]) if row is not None else None
+
+
+def request_rows(organization_id: uuid.UUID, ids: Sequence[uuid.UUID]) -> list[RequestRow]:
+    """Display rows for IDs already chosen through scoped_requests, in the given order.
+
+    Authorization happens where the IDs are chosen; the organization filter here is
+    defense in depth.
+    """
+    if not ids:
+        return []
+    stmt = _request_rows(organization_id).where(MaintenanceRequest.id.in_(ids))
+    by_id = {row[0].id: (row[0], row[1], row[2], row[3]) for row in db.session.execute(stmt)}
+    return [by_id[row_id] for row_id in ids if row_id in by_id]

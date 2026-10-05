@@ -22,7 +22,7 @@ from app.common.errors import (
     PermissionDeniedError,
     RequestValidationError,
 )
-from app.common.pagination import paginate
+from app.common.pagination import paginate_keys
 from app.contractors import repository as contractors_repository
 from app.contractors.models import Contractor, ContractorStatus
 from app.extensions import db
@@ -162,7 +162,8 @@ def list_work_orders(
     limit: int,
     cursor: str | None,
 ) -> tuple[list[dict[str, Any]], str | None]:
-    stmt = repository.visible_work_orders(context)
+    # Choose the page from the join-free scope, then join display data for that page only.
+    stmt = repository.scoped_work_orders(context)
     if status is not None:
         stmt = stmt.where(WorkOrder.status == status)
     if contractor_id is not None:
@@ -171,15 +172,15 @@ def list_work_orders(
         stmt = stmt.where(WorkOrder.request_id == request_id)
     if overdue:
         stmt = stmt.where(WorkOrder.due_date < _today(), WorkOrder.status.in_(ACTIVE_STATUSES))
-    rows, next_cursor = paginate(
+    ids, next_cursor = paginate_keys(
         stmt,
         created_column=WorkOrder.created_at,
         id_column=WorkOrder.id,
         limit=limit,
         cursor=cursor,
-        scalars=False,
     )
-    return [work_order_view(tuple(row)) for row in rows], next_cursor
+    rows = repository.work_order_rows(context.organization_id, ids)
+    return [work_order_view(row) for row in rows], next_cursor
 
 
 def get_work_order(context: OrgContext, work_order_id: uuid.UUID) -> dict[str, Any]:

@@ -70,3 +70,27 @@ def paginate(
         return page, None
     last = page[-1] if scalars else page[-1][0]
     return page, encode_cursor(getattr(last, created_column.key), getattr(last, id_column.key))
+
+
+def paginate_keys(
+    stmt: Select[*tuple[Any, ...]],
+    *,
+    created_column: Any,
+    id_column: Any,
+    limit: int,
+    cursor: str | None,
+) -> tuple[list[uuid.UUID], str | None]:
+    """Newest-first keyset page of IDs only: step one of "choose the page, then join".
+
+    Display joins then run for `limit` rows instead of every row in scope. Measured on a
+    manager with 721 visible requests: joins ran 721 times to return 5 rows.
+    """
+    stmt = stmt.with_only_columns(id_column, created_column)
+    if cursor:
+        created_at, row_id = decode_cursor(cursor)
+        stmt = stmt.where(tuple_(created_column, id_column) < tuple_(created_at, row_id))
+    stmt = stmt.order_by(created_column.desc(), id_column.desc()).limit(limit + 1)
+    rows = db.session.execute(stmt).all()
+    page = rows[:limit]
+    next_cursor = encode_cursor(page[-1][1], page[-1][0]) if len(rows) > limit else None
+    return [row[0] for row in page], next_cursor

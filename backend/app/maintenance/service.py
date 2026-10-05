@@ -17,7 +17,7 @@ from app.common.errors import (
     PermissionDeniedError,
     RequestValidationError,
 )
-from app.common.pagination import paginate
+from app.common.pagination import paginate, paginate_keys
 from app.extensions import db
 from app.maintenance import repository, workflow
 from app.maintenance.models import (
@@ -191,7 +191,8 @@ def list_requests(
     limit: int,
     cursor: str | None,
 ) -> tuple[list[dict[str, Any]], str | None]:
-    stmt = repository.visible_requests(context)
+    # Choose the page from the join-free scope, then join display data for that page only.
+    stmt = repository.scoped_requests(context)
     if status is not None:
         stmt = stmt.where(MaintenanceRequest.status == status)
     if priority is not None:
@@ -200,15 +201,15 @@ def list_requests(
         stmt = stmt.where(MaintenanceRequest.property_id == property_id)
     if unit_id is not None:
         stmt = stmt.where(MaintenanceRequest.unit_id == unit_id)
-    rows, next_cursor = paginate(
+    ids, next_cursor = paginate_keys(
         stmt,
         created_column=MaintenanceRequest.created_at,
         id_column=MaintenanceRequest.id,
         limit=limit,
         cursor=cursor,
-        scalars=False,
     )
-    return [request_view(tuple(row)) for row in rows], next_cursor
+    rows = repository.request_rows(context.organization_id, ids)
+    return [request_view(row) for row in rows], next_cursor
 
 
 def get_request(context: OrgContext, request_id: uuid.UUID) -> dict[str, Any]:

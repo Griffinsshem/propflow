@@ -110,29 +110,44 @@ def _work_order_counts(
     return _as_counts(db.session.execute(stmt).one())
 
 
+def _ids(stmt: Any) -> list[uuid.UUID]:
+    return list(db.session.execute(stmt).scalars())
+
+
+def _request_views(context: OrgContext, ids: list[uuid.UUID]) -> list[dict[str, Any]]:
+    rows = maintenance_repository.request_rows(context.organization_id, ids)
+    return [maintenance_service.request_view(row) for row in rows]
+
+
+def _work_order_views(context: OrgContext, ids: list[uuid.UUID]) -> list[dict[str, Any]]:
+    rows = work_orders_repository.work_order_rows(context.organization_id, ids)
+    return [work_orders_service.work_order_view(row) for row in rows]
+
+
 def _recently_updated(context: OrgContext, property_id: uuid.UUID | None) -> list[dict[str, Any]]:
-    stmt = maintenance_repository.visible_requests(context)
+    stmt = maintenance_repository.scoped_requests(context).with_only_columns(MaintenanceRequest.id)
     if property_id is not None:
         stmt = stmt.where(MaintenanceRequest.property_id == property_id)
     stmt = stmt.order_by(MaintenanceRequest.updated_at.desc(), MaintenanceRequest.id.desc())
-    rows = db.session.execute(stmt.limit(RECENT_LIMIT)).all()
-    return [maintenance_service.request_view((row[0], row[1], row[2], row[3])) for row in rows]
+    return _request_views(context, _ids(stmt.limit(RECENT_LIMIT)))
 
 
 def _overdue_work_orders(
     context: OrgContext, property_id: uuid.UUID | None
 ) -> list[dict[str, Any]]:
-    stmt = work_orders_repository.visible_work_orders(context).where(
-        WorkOrder.status.in_(ACTIVE_STATUSES), WorkOrder.due_date < _now().date()
+    stmt = (
+        work_orders_repository.scoped_work_orders(context)
+        .with_only_columns(WorkOrder.id)
+        .where(WorkOrder.status.in_(ACTIVE_STATUSES), WorkOrder.due_date < _now().date())
     )
     if property_id is not None:
-        stmt = stmt.where(MaintenanceRequest.property_id == property_id)
-    stmt = stmt.order_by(WorkOrder.due_date.asc(), WorkOrder.created_at.asc())
-    rows = db.session.execute(stmt.limit(RECENT_LIMIT)).all()
-    return [
-        work_orders_service.work_order_view((row[0], row[1], row[2], row[3], row[4]))
-        for row in rows
-    ]
+        requests_on_property = select(MaintenanceRequest.id).where(
+            MaintenanceRequest.organization_id == context.organization_id,
+            MaintenanceRequest.property_id == property_id,
+        )
+        stmt = stmt.where(WorkOrder.request_id.in_(requests_on_property))
+    stmt = stmt.order_by(WorkOrder.due_date.asc(), WorkOrder.created_at.asc(), WorkOrder.id.asc())
+    return _work_order_views(context, _ids(stmt.limit(RECENT_LIMIT)))
 
 
 def operations(context: OrgContext, *, property_id: uuid.UUID | None) -> dict[str, Any]:
@@ -201,8 +216,9 @@ def tenant(context: OrgContext) -> dict[str, Any]:
     """The caller's own unit, requests and recent activity."""
     own = tenants_repository.get_own_tenant(context)
     counts = _request_counts(context, reporter_id=context.membership_id)
-    stmt = (
-        maintenance_repository.visible_requests(context)
+    recent = (
+        maintenance_repository.scoped_requests(context)
+        .with_only_columns(MaintenanceRequest.id)
         .where(MaintenanceRequest.reported_by_membership_id == context.membership_id)
         .order_by(MaintenanceRequest.created_at.desc(), MaintenanceRequest.id.desc())
         .limit(RECENT_LIMIT)
@@ -219,26 +235,23 @@ def tenant(context: OrgContext) -> dict[str, Any]:
             "resolved": counts["resolved"],
             "closed": counts["closed"],
         },
-        "recent_requests": [
-            maintenance_service.request_view((row[0], row[1], row[2], row[3]))
-            for row in db.session.execute(stmt).all()
-        ],
+        "recent_requests": _request_views(context, _ids(recent)),
         "recent_activity": activity,
     }
 
 
 def contractor(context: OrgContext) -> dict[str, Any]:
     """The caller's work: counters and active jobs, soonest due first."""
-    stmt = (
-        work_orders_repository.visible_work_orders(context)
+    upcoming = (
+        work_orders_repository.scoped_work_orders(context)
+        .with_only_columns(WorkOrder.id)
         .where(WorkOrder.status.in_(ACTIVE_STATUSES))
-        .order_by(WorkOrder.due_date.asc().nulls_last(), WorkOrder.created_at.asc())
+        .order_by(
+            WorkOrder.due_date.asc().nulls_last(), WorkOrder.created_at.asc(), WorkOrder.id.asc()
+        )
         .limit(UPCOMING_LIMIT)
     )
     return {
         "work_orders": _work_order_counts(context),
-        "upcoming": [
-            work_orders_service.work_order_view((row[0], row[1], row[2], row[3], row[4]))
-            for row in db.session.execute(stmt).all()
-        ],
+        "upcoming": _work_order_views(context, _ids(upcoming)),
     }

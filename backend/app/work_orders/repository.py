@@ -10,6 +10,7 @@ Visibility rules (object-level authorization), in one place:
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 
 from sqlalchemy import ColumnElement, Select, and_, false, select
 
@@ -105,3 +106,14 @@ def history_rows(
         .limit(MAX_HISTORY_ROWS)
     )
     return [(entry, user) for entry, user in db.session.execute(stmt)]
+
+
+def work_order_rows(organization_id: uuid.UUID, ids: Sequence[uuid.UUID]) -> list[WorkOrderRow]:
+    """Display rows for IDs already chosen through scoped_work_orders, in the given order."""
+    if not ids:
+        return []
+    stmt = _rows(organization_id).where(WorkOrder.id.in_(ids))
+    by_id = {
+        row[0].id: (row[0], row[1], row[2], row[3], row[4]) for row in db.session.execute(stmt)
+    }
+    return [by_id[row_id] for row_id in ids if row_id in by_id]
