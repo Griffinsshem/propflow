@@ -32,3 +32,8 @@ celerybeat-schedule*
 # Load testing: generated local accounts and run artifacts
 load-tests/accounts.json
 load-tests/results/
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/
