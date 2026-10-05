@@ -62,6 +62,8 @@ const BUDGETS_MS = {
 
 const PROFILES = {
   smoke: { ramp: '10s', hold: '30s', tenants: 2, managers: 1, contractors: 1, owners: 1, loginRate: 1 },
+  // Same mix as baseline, shorter: enough samples to profile individual endpoints.
+  profile: { ramp: '1m', hold: '3m', tenants: 40, managers: 15, contractors: 15, owners: 5, loginRate: 1 },
   baseline: { ramp: '2m', hold: '8m', tenants: 40, managers: 15, contractors: 15, owners: 5, loginRate: 1 },
 };
 const P = PROFILES[PROFILE];
