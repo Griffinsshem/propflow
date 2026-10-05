@@ -1,0 +1,176 @@
+# PropFlow on Render (ADR 0001, ADR 0014). Runbook: docs/operations/deployment.md
+# Region: frankfurt, the closest Render region to Kenya.
+# Sizing is measured: docs/performance/load-test-results.md, section 6.
+# No secret is written here: Render generates them or prompts for them on creation.
+
+envVarGroups:
+  - name: propflow-shared
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: FLASK_APP
+        value: wsgi:app
+      - key: BACKGROUND_TASKS
+        value: async
+      - key: STORAGE_BACKEND
+        value: s3
+      - key: S3_REGION
+        value: auto
+      - key: EMAIL_BACKEND
+        value: disabled # LAUNCH BLOCKER: no email provider yet (see the runbook)
+      - key: DB_POOL_SIZE
+        value: "2" # a sync worker serves one request, so needs one connection, at a time
+      - key: DB_MAX_OVERFLOW
+        value: "0"
+      - key: TRUSTED_PROXY_COUNT
+        value: "2" # Vercel + Render edge; verify per the runbook. Safe only with the proxy secret.
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PROXY_SHARED_SECRET
+        generateValue: true # copy into Vercel as a server-only variable
+
+services:
+  - type: web
+    name: propflow-api
+    runtime: python
+    region: frankfurt
+    plan: 1c-2g
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    preDeployCommand: flask db upgrade
+    startCommand: gunicorn -c gunicorn.conf.py wsgi:app
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    numInstances: 1
+    envVars:
+      - fromGroup: propflow-shared
+      - key: WEB_CONCURRENCY
+        value: "2" # 2 x vCPU; change together with the plan
+      - key: DATABASE_URL
+        fromDatabase:
+          name: propflow-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: propflow-redis
+          property: connectionString
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: S3_ENDPOINT_URL
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+
+  - type: worker
+    name: propflow-worker
+    runtime: python
+    region: frankfurt
+    plan: 0.5c-512mb
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A celery_worker.celery worker --loglevel=INFO --concurrency=1 --max-tasks-per-child=200
+    autoDeployTrigger: checksPass
+    envVars:
+      - fromGroup: propflow-shared
+      - key: DATABASE_URL
+        fromDatabase:
+          name: propflow-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: propflow-redis
+          property: connectionString
+      - key: FRONTEND_ORIGIN
+        fromService:
+          type: web
+          name: propflow-api
+          envVarKey: FRONTEND_ORIGIN
+      - key: S3_ENDPOINT_URL
+        fromService:
+          type: web
+          name: propflow-api
+          envVarKey: S3_ENDPOINT_URL
+      - key: S3_BUCKET
+        fromService:
+          type: web
+          name: propflow-api
+          envVarKey: S3_BUCKET
+      - key: S3_ACCESS_KEY_ID
+        fromService:
+          type: web
+          name: propflow-api
+          envVarKey: S3_ACCESS_KEY_ID
+      - key: S3_SECRET_ACCESS_KEY
+        fromService:
+          type: web
+          name: propflow-api
+          envVarKey: S3_SECRET_ACCESS_KEY
+
+  # Exactly one scheduler: never scale this service beyond one instance.
+  - type: worker
+    name: propflow-beat
+    runtime: python
+    region: frankfurt
+    plan: 0.5c-512mb
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A celery_worker.celery beat --loglevel=INFO --schedule=/tmp/celerybeat-schedule
+    autoDeployTrigger: checksPass
+    numInstances: 1
+    envVars:
+      - fromGroup: propflow-shared
+      - key: DATABASE_URL
+        fromDatabase:
+          name: propflow-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: propflow-redis
+          property: connectionString
+      - key: FRONTEND_ORIGIN
+        fromService:
+          type: web
+          name: propflow-api
+          envVarKey: FRONTEND_ORIGIN
+      - key: S3_ENDPOINT_URL
+        fromService:
+          type: web
+          name: propflow-api
+          envVarKey: S3_ENDPOINT_URL
+      - key: S3_BUCKET
+        fromService:
+          type: web
+          name: propflow-api
+          envVarKey: S3_BUCKET
+      - key: S3_ACCESS_KEY_ID
+        fromService:
+          type: web
+          name: propflow-api
+          envVarKey: S3_ACCESS_KEY_ID
+      - key: S3_SECRET_ACCESS_KEY
+        fromService:
+          type: web
+          name: propflow-api
+          envVarKey: S3_SECRET_ACCESS_KEY
+
+  - type: keyvalue
+    name: propflow-redis
+    region: frankfurt
+    plan: 256mb
+    ipAllowList: [] # private network only
+    maxmemoryPolicy: noeviction # holds the Celery queue: evicting it would silently lose jobs
+
+databases:
+  - name: propflow-db
+    region: frankfurt
+    plan: 0.5c-1g
+    postgresMajorVersion: "16" # the version CI and local development test against
+    databaseName: propflow
+    ipAllowList: [] # private network only
