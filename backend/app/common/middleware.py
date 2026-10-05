@@ -78,5 +78,7 @@ def register_middleware(app: Flask) -> None:
             path=request.path,
             status=response.status_code,
             duration_ms=duration_ms,
+            db_queries=g.get("db_queries", 0),
+            db_ms=round(g.get("db_ms", 0.0), 2),
         )
         return response

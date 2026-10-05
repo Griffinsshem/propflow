@@ -14,6 +14,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from app.api.v1 import register_v1
 from app.auth.middleware import register_auth_middleware
 from app.auth.passwords import init_password_hasher
+from app.common.db_timing import register_db_timing
 from app.common.errors import register_error_handlers
 from app.common.health import health_bp
 from app.common.logging import configure_logging
@@ -45,6 +46,7 @@ def create_app(app_env: str | None = None, overrides: Mapping[str, Any] | None =
     from app import models  # noqa: F401
 
     db.init_app(app)
+    register_db_timing(app)
     migrate.init_app(app, db, directory=str(MIGRATIONS_DIR))
     api = Api(app)
     app.extensions["api"] = api
