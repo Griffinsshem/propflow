@@ -126,3 +126,61 @@ Budgets are initial targets set before the run, not spec requirements.
 
 Each run changes the data (requests triaged, jobs advanced); reseed before runs that will
 be compared.
+
+## 3. Profiling the operations dashboard (2026-10-05)
+
+The baseline showed `GET /dashboard/operations` at about 3x the other dashboards. Every
+request log line now records `db_queries` and `db_ms` (`app/common/db_timing.py`), and
+`load-tests/route_timings.py` splits each route's server time into database and
+application time. Profile runs: `PROFILE=profile` (1 min ramp, 3 min hold, baseline mix).
+
+**Finding:** database-bound (62.6 of 96.0 ms at p50), 8 queries, no N+1. EXPLAIN showed the
+list-style queries (recent requests, recently updated, overdue work orders) joining display
+tables for all 721 requests in a manager's scope before sorting and keeping 5. The planner
+estimated 4 rows per property against 180 actual (`organization_id` and `property_id` are
+correlated). Extended statistics (`CREATE STATISTICS ... (dependencies)`) were tried and
+**did not change the estimate or the plan**, because the property IDs arrive at run time from
+the assignment subquery, so the experiment was reverted.
+
+**Fix:** choose the page first, then join (`paginate_keys`, `request_rows`,
+`work_order_rows`). The page's IDs come from the join-free scoped query (authorization is
+unchanged); display joins then run for the page only. Applied to the maintenance and work
+order lists and every dashboard list.
+
+### Manager dashboard query plans (no load)
+
+| Query | Before | After |
+|---|---:|---:|
+| Recent requests | 13.10 ms (joins x721) | 0.88 + 0.59 ms (5 IDs, joins x5) |
+| Recently updated | 11.59 ms (joins x721) | 0.67 + 0.29 ms |
+| Overdue work orders | 11.24 ms | 3.08 + 0.44 ms |
+| Work order counters | 5.24 ms | 3.77 ms (must visit every in-scope job) |
+| Request counters | 1.58 ms | 1.11 ms |
+| **Total** | **42.7 ms** | **10.8 ms** |
+
+### `GET /dashboard/operations` under load (server-side, profile runs)
+
+| Metric | Before | After |
+|---|---:|---:|
+| Database p50 / p95 | 62.6 / 138.8 ms | 34.0 / 67.1 ms |
+| Total p50 / p95 | 96.0 / 209.4 ms | 79.3 / 141.7 ms |
+| k6 p95 (client-side) | 216.4 ms | 148.5 ms |
+| Queries per request | 8 | 11 |
+
+### Trade-off, measured
+
+Page-first adds one round trip per list. On endpoints whose scope is already small, p50 moved
+by a few milliseconds, within run-to-run noise on this host but in a consistent direction:
+`GET /maintenance` 26.9 → 31.0 ms, tenant dashboard 40.1 → 43.3 ms, contractor dashboard
+39.1 → 41.4 ms (`GET /work-orders` 39.3 → 36.6 ms). Accepted deliberately: the old shape's
+join cost grows with portfolio size, the new one is bounded by page size. The growth claim is
+reasoned from the plans, not measured at a larger scale.
+
+### Where the time goes now
+
+Application time (42.4 ms p50) now exceeds database time (34.0 ms) for this endpoint. Under
+load, database time is about 3x the quiet-machine EXPLAIN total, which is consistent with CPU
+contention on a host shared by 4 workers, Postgres, Redis, k6 and Argon2 logins. The next lever
+would be merging the dashboard's queries into fewer round trips. Not pursued: every endpoint
+is within budget with about 2x headroom at p95, so the next step is a stress test to find the
+real limit rather than further tuning.
