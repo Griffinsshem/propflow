@@ -31,12 +31,18 @@ before creating the Blueprint: creating it starts billing.
    If a browser preflight is rejected, compare the requested headers with this list.
 3. **Frontend origin:** the production frontend URL (`https://...`, no trailing slash). If the
    frontend is not deployed yet, use its planned URL and update it later.
+4. **Email provider** (any SMTP provider; ADR 0015): create SMTP credentials and verify the
+   sending domain by adding the provider's SPF, DKIM and DMARC DNS records. Without them,
+   password resets land in spam or are rejected. `MAIL_FROM` must use the verified domain,
+   for example `PropFlow <no-reply@yourdomain>`. For a backend-only trial deploy before
+   this is ready, set `EMAIL_BACKEND=disabled` in the `propflow-shared` group.
 
 ## First deploy
 
 1. Render Dashboard → New → Blueprint → select the repository. Render reads `render.yaml`.
 2. Fill in the prompted values on `propflow-api`: `FRONTEND_ORIGIN`, `S3_ENDPOINT_URL`,
-   `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`. The worker and beat reference these.
+   `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `SMTP_HOST`, `SMTP_USERNAME`,
+   `SMTP_PASSWORD`, `MAIL_FROM`. The worker and beat reference these.
    If the worker or beat reports a missing S3 variable after the first sync, run a manual
    Blueprint sync once the API exists.
 3. Create. Render provisions Postgres and Key Value, builds the three services, runs
@@ -53,6 +59,7 @@ before creating the Blueprint: creating it starts billing.
 | Proxy secret | `curl -i https://<api>.onrender.com/api/v1/auth/me` | `403`: direct calls are refused |
 | Worker | worker logs | `celery@... ready.` |
 | Scheduler | beat logs | `beat: Starting...`, then scheduled tasks every 15 minutes |
+| Email | request a password reset for a test account | delivered to the inbox (not spam); worker log `email_sent` |
 
 ## Verify (after the frontend is deployed)
 
@@ -113,8 +120,9 @@ only on error rates:
 
 ## Launch blockers (production is not ready for real users until these are done)
 
-1. **Email provider.** `EMAIL_BACKEND=disabled`: invitations and password resets are not
-   delivered. A real provider must be implemented and configured.
+1. **Email provider configured.** The SMTP backend exists (ADR 0015); production needs real
+   credentials and a verified sending domain (SPF, DKIM, DMARC), confirmed by the
+   password-reset check above.
 2. **Frontend** deployed on Vercel with the proxy secret, and the hop-count verification above.
 3. **Database backups** confirmed on the chosen Postgres plan, with a test restore.
 4. **Custom domain** and HTTPS for the frontend.

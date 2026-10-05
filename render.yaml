@@ -17,7 +17,11 @@ envVarGroups:
       - key: S3_REGION
         value: auto
       - key: EMAIL_BACKEND
-        value: disabled # LAUNCH BLOCKER: no email provider yet (see the runbook)
+        value: smtp # provider-agnostic (ADR 0015); credentials prompted on the API
+      - key: SMTP_SECURITY
+        value: starttls
+      - key: SMTP_PORT
+        value: "587"
       - key: DB_POOL_SIZE
         value: "2" # a sync worker serves one request, so needs one connection, at a time
       - key: DB_MAX_OVERFLOW
@@ -65,6 +69,14 @@ services:
         sync: false
       - key: S3_SECRET_ACCESS_KEY
         sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
 
   - type: worker
     name: propflow-worker
@@ -111,6 +123,26 @@ services:
           type: web
           name: propflow-api
           envVarKey: S3_SECRET_ACCESS_KEY
+      - key: SMTP_HOST
+        fromService:
+          type: web
+          name: propflow-api
+          envVarKey: SMTP_HOST
+      - key: SMTP_USERNAME
+        fromService:
+          type: web
+          name: propflow-api
+          envVarKey: SMTP_USERNAME
+      - key: SMTP_PASSWORD
+        fromService:
+          type: web
+          name: propflow-api
+          envVarKey: SMTP_PASSWORD
+      - key: MAIL_FROM
+        fromService:
+          type: web
+          name: propflow-api
+          envVarKey: MAIL_FROM
 
   # Exactly one scheduler: never scale this service beyond one instance.
   - type: worker
@@ -159,6 +191,26 @@ services:
           type: web
           name: propflow-api
           envVarKey: S3_SECRET_ACCESS_KEY
+      - key: SMTP_HOST
+        fromService:
+          type: web
+          name: propflow-api
+          envVarKey: SMTP_HOST
+      - key: SMTP_USERNAME
+        fromService:
+          type: web
+          name: propflow-api
+          envVarKey: SMTP_USERNAME
+      - key: SMTP_PASSWORD
+        fromService:
+          type: web
+          name: propflow-api
+          envVarKey: SMTP_PASSWORD
+      - key: MAIL_FROM
+        fromService:
+          type: web
+          name: propflow-api
+          envVarKey: MAIL_FROM
 
   - type: keyvalue
     name: propflow-redis
