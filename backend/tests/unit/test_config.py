@@ -121,3 +121,37 @@ def test_broker_and_rate_limit_urls_derive_from_redis_url(
 def test_explicit_broker_url_wins(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CELERY_BROKER_URL", "redis://broker:6379/5")
     assert build_config("production")["CELERY"]["broker_url"] == "redis://broker:6379/5"
+
+
+@pytest.fixture()
+def smtp_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("EMAIL_BACKEND", "smtp")
+    monkeypatch.setenv("SMTP_HOST", "smtp.provider.example")
+    monkeypatch.setenv("SMTP_USERNAME", "apikey")
+    monkeypatch.setenv("SMTP_PASSWORD", "x" * 32)
+    monkeypatch.setenv("MAIL_FROM", "PropFlow <no-reply@propflow.example>")
+
+
+@pytest.mark.usefixtures("production_env", "smtp_env")
+def test_smtp_defaults_to_starttls_on_587() -> None:
+    config = build_config("production")
+    assert config["SMTP_SECURITY"] == "starttls"
+    assert config["SMTP_PORT"] == 587
+
+
+@pytest.mark.usefixtures("production_env", "smtp_env")
+def test_production_refuses_unencrypted_smtp(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SMTP_SECURITY", "none")
+    with pytest.raises(ConfigError, match="unencrypted"):
+        build_config("production")
+
+
+@pytest.mark.usefixtures("production_env", "smtp_env")
+def test_smtp_requires_a_real_sender_and_a_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MAIL_FROM", "no-reply@propflow.local")
+    with pytest.raises(ConfigError, match="MAIL_FROM"):
+        build_config("production")
+    monkeypatch.setenv("MAIL_FROM", "no-reply@propflow.example")
+    monkeypatch.delenv("SMTP_HOST")
+    with pytest.raises(ConfigError, match="SMTP_HOST"):
+        build_config("production")

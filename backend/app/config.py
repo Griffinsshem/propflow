@@ -14,7 +14,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 VALID_ENVS = frozenset({"development", "test", "production"})
 INSECURE_SECRET_PLACEHOLDERS = frozenset({"", "replace-me", "change-me"})
 MIN_SECRET_LENGTH = 32
-EMAIL_BACKENDS = frozenset({"console", "memory", "disabled"})
+EMAIL_BACKENDS = frozenset({"console", "memory", "disabled", "smtp"})
+SMTP_SECURITY_MODES = frozenset({"starttls", "ssl", "none"})
 # These backends print or retain message bodies, which contain account-recovery tokens.
 NON_PRODUCTION_EMAIL_BACKENDS = frozenset({"console", "memory"})
 STORAGE_BACKENDS = frozenset({"s3", "memory"})
@@ -125,6 +126,29 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
             "S3_REGION": os.environ.get("S3_REGION", "auto").strip() or "auto",
         }
 
+    smtp_settings: dict[str, Any] = {}
+    if email_backend == "smtp":
+        security = os.environ.get("SMTP_SECURITY", "starttls").strip().lower()
+        if security not in SMTP_SECURITY_MODES:
+            raise ConfigError(f"SMTP_SECURITY must be one of {sorted(SMTP_SECURITY_MODES)}")
+        if is_production and security == "none":
+            raise ConfigError("SMTP_SECURITY=none would send credentials and links unencrypted")
+        sender = os.environ.get("MAIL_FROM", "").strip()
+        if "@" not in sender or sender.rstrip(">").endswith(".local"):
+            raise ConfigError("MAIL_FROM must be a real sender address when EMAIL_BACKEND=smtp")
+        username = os.environ.get("SMTP_USERNAME", "").strip() or None
+        password = os.environ.get("SMTP_PASSWORD", "")
+        if username and not password:
+            raise ConfigError("SMTP_PASSWORD is required when SMTP_USERNAME is set")
+        smtp_settings = {
+            "SMTP_HOST": _require("SMTP_HOST"),
+            "SMTP_PORT": _int_env("SMTP_PORT", 465 if security == "ssl" else 587),
+            "SMTP_SECURITY": security,
+            "SMTP_USERNAME": username,
+            "SMTP_PASSWORD": password,
+            "SMTP_TIMEOUT_SECONDS": _int_env("SMTP_TIMEOUT_SECONDS", 15),
+        }
+
     return {
         "APP_ENV": env,
         "TESTING": is_test,
@@ -206,6 +230,7 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
         },
         "STORAGE_BACKEND": storage_backend,
         **storage_settings,
+        **smtp_settings,
         "MAIL_FROM": os.environ.get("MAIL_FROM", "no-reply@propflow.local"),
         # Rate limiting (ADR 0004). Off in tests unless a test opts in.
         "RATELIMIT_ENABLED": not is_test,
