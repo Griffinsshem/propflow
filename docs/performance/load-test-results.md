@@ -224,3 +224,63 @@ rather than failing fast, so users see multi-second waits instead of errors. Pro
 run below the knee, with scaling triggered on latency or worker utilisation.
 
 **Hypothesis to confirm:** more workers raise the ceiling until CPU saturates (section 5).
+
+## 5. Stress test: one instance, 8 sync workers (2026-10-05)
+
+Identical profile and data; only `--workers 8` changed (connection pools at defaults).
+
+| Step | Journeys/s | Achieved req/s | p50 ms | p95 ms | p99 ms | 5xx / timeouts / 429 | Dropped | CPU busy | Swap KiB/s |
+|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|
+| 1 | 5 | 19.6 | 42 | 282 (login warm-up) | 469 | 0 / 0 / 0 | 0 | 36% | 3 |
+| 2 | 10 | 38.1 | 40 | 134 | 303 | 0 / 0 / 0 | 0 | 40% | 5 |
+| 3 | 15 | 57.6 | 38 | 116 | 274 | 0 / 0 / 0 | 0 | 49% | 0 |
+| 4 | 20 | 77.2 | 36 | 120 | 278 | 0 / 0 / 0 | 0 | 62% | 0 |
+| 5 | 30 | 114.3 | 30 | 115 | 291 | 0 / 0 / 0 | 0 | 74% | 0 |
+| 6 | 40 | 147.7 | 27 | 112 | 214 | 0 / 0 / 0 | 0 | 79% | 0 |
+| 7 | 50 | 176.7 | 42 | 249 | 349 | 0 / 0 / 0 | 0 | 91% | 1 |
+| 8 | 60 | 119.4 | 2,328 | 10,082 | 11,918 | 0 / 0 / 0 | 1,716 | 99% | 2,245 |
+
+56,425 requests in total; 0 failed. Six 409s at step 8 (optimistic-concurrency races,
+correctly rejected).
+
+### Comparison
+
+| | 4 workers | 8 workers |
+|---|---:|---:|
+| Highest throughput with flat p95 | 77.9 req/s | 147.7 req/s |
+| Peak throughput | 113.5 req/s | 176.7 req/s |
+| Knee | 78-113 req/s | 148-177 req/s |
+| CPU busy at the knee | 65% | 79-91% |
+| Limiting resource | worker slots | CPU, then memory |
+
+**Hypothesis confirmed, with a limit:** throughput scales with workers until CPU saturates.
+Doubling workers raised the ceiling about 56%, not 100%, because CPU reached 91% at step 7.
+Server-side times stayed at baseline levels (operations dashboard p95 140 ms, database p95
+at most 65 ms); login p50 rose from 196 to 267 ms as Argon2 competed for CPU.
+
+**Collapse past saturation:** at step 8, CPU reached 99% and swapping began; throughput fell
+*below* the previous step (176.7 → 119.4 req/s). The overload behaviour is real; where it
+occurred is specific to this host (8 workers, Postgres, Redis and 463 k6 VUs sharing 15 GiB).
+
+## 6. Production starting configuration (derived from sections 4-5)
+
+| Setting | Starting value | Reason |
+|---|---|---|
+| gunicorn sync workers | 2 x vCPU | requests spend ~35-45% of their time waiting on the database, so a core serves about two workers before CPU limits |
+| DB pool per worker | `DB_POOL_SIZE=2`, `DB_MAX_OVERFLOW=0` | a sync worker serves one request, using one connection, at a time; total = instances x workers x 2 |
+| Operating point | at most ~70% of the measured knee per instance | past saturation throughput falls rather than levels off |
+| Scaling | add instances (horizontal) | stateless API: sessions in Postgres, rate limits in Redis |
+| Alerting | latency (p95) and CPU, not error rate | overload showed as queueing delay with zero errors |
+
+Back-of-envelope, not measured: the baseline's 75 human-paced users produced 19 req/s; ~105
+req/s (70% of the 8-worker knee) would correspond to roughly 400 concurrently active users
+per instance on this host. Every value above must be re-measured with the stress profile
+against the deployed stack, whose CPU, memory and network differ from this laptop.
+
+## Updated: what these tests do not prove
+
+- Production capacity, network latency (Vercel proxy hop, Kenya to the hosting region),
+  production logging, or Celery-based background work: see section 2.
+- Behaviour on Render instance sizes: worker counts and the knee depend on vCPU and memory.
+- Larger datasets than 64,000 requests across 50 organizations, or cold caches.
+- Isolation: k6 shared the host; at high load its VUs competed for CPU and memory.
