@@ -6,6 +6,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from dotenv import load_dotenv
 
@@ -42,6 +43,19 @@ def _int_env(name: str, default: int) -> int:
         return int(raw)
     except ValueError as exc:
         raise ConfigError(f"{name} must be an integer") from exc
+
+
+def _redis_url(name: str, *, database: int) -> str:
+    """An explicit URL wins; otherwise REDIS_URL with its own logical database.
+
+    Hosting platforms hand out a single Redis URL and blueprints cannot build strings, so
+    the Celery broker and the rate limiter derive separate databases from it.
+    """
+    explicit = os.environ.get(name, "").strip()
+    if explicit:
+        return explicit
+    base = urlsplit(_require("REDIS_URL"))
+    return urlunsplit(base._replace(path=f"/{database}"))
 
 
 def normalize_database_url(url: str) -> str:
@@ -156,7 +170,7 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
         # Celery: tasks are acknowledged only after they finish (crash = redelivery),
         # one task prefetched at a time, JSON only, no result storage.
         "CELERY": {
-            "broker_url": "memory://" if is_test else _require("CELERY_BROKER_URL"),
+            "broker_url": "memory://" if is_test else _redis_url("CELERY_BROKER_URL", database=1),
             "task_ignore_result": True,
             "task_acks_late": True,
             "task_reject_on_worker_lost": True,
@@ -195,7 +209,9 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
         "MAIL_FROM": os.environ.get("MAIL_FROM", "no-reply@propflow.local"),
         # Rate limiting (ADR 0004). Off in tests unless a test opts in.
         "RATELIMIT_ENABLED": not is_test,
-        "RATELIMIT_STORAGE_URI": "memory://" if is_test else _require("RATELIMIT_STORAGE_URI"),
+        "RATELIMIT_STORAGE_URI": "memory://"
+        if is_test
+        else _redis_url("RATELIMIT_STORAGE_URI", database=2),
         "RATELIMIT_STRATEGY": "sliding-window-counter",
         "RATELIMIT_KEY_PREFIX": "propflow",
         "RATELIMIT_DEFAULT": "1000 per minute",

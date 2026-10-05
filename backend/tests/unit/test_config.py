@@ -103,3 +103,21 @@ def test_trusting_proxy_headers_requires_a_strong_proxy_secret(
 def test_hsts_is_enabled_only_in_production() -> None:
     assert build_config("production")["HSTS_ENABLED"] is True
     assert build_config("test")["HSTS_ENABLED"] is False
+
+
+@pytest.mark.usefixtures("production_env")
+def test_broker_and_rate_limit_urls_derive_from_redis_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("REDIS_URL", "redis://user:pass@red-abc:6379")
+    monkeypatch.delenv("CELERY_BROKER_URL", raising=False)
+    monkeypatch.delenv("RATELIMIT_STORAGE_URI", raising=False)
+    config = build_config("production")
+    assert config["CELERY"]["broker_url"] == "redis://user:pass@red-abc:6379/1"
+    assert config["RATELIMIT_STORAGE_URI"] == "redis://user:pass@red-abc:6379/2"
+
+
+@pytest.mark.usefixtures("production_env")
+def test_explicit_broker_url_wins(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CELERY_BROKER_URL", "redis://broker:6379/5")
+    assert build_config("production")["CELERY"]["broker_url"] == "redis://broker:6379/5"
