@@ -48,7 +48,10 @@ test("a wrong password gets one generic message", async ({ page }) => {
   await page.getByLabel("Email").fill(`nobody-${randomUUID()}@example.com`);
   await page.getByLabel("Password").fill("not the right password");
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("alert")).toHaveText("Email or password is incorrect.");
+  // Filtered by text: Next's route announcer is also role="alert" (empty, for screen readers).
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Email or password is incorrect." }),
+  ).toBeVisible();
 });
 
 test("pages carry a nonce-based CSP and the API answers through the proxy", async ({
