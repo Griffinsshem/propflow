@@ -184,3 +184,43 @@ contention on a host shared by 4 workers, Postgres, Redis, k6 and Argon2 logins.
 would be merging the dashboard's queries into fewer round trips. Not pursued: every endpoint
 is within budget with about 2x headroom at p95, so the next step is a stress test to find the
 real limit rather than further tuning.
+
+## 4. Stress test: one instance, 4 sync workers (2026-10-05)
+
+`PROFILE=stress`: journeys started at a rising rate in steps (5, 10, 15, 20, 30, 40, 50, 60
+per second; 15 s ramp + 60 s hold each), baseline mix (50% tenants, 20% managers, 15%
+contractors, 5% owners, 10% cold logins), no think time, all rate limits on. Status changes
+accept 409 (optimistic-concurrency races) as correct. The run aborts once p95 exceeds 3 s or
+errors exceed 5%. Per-step figures: `load-tests/stress_report.py` over the k6 CSV output.
+
+| Step | Journeys/s | Achieved req/s | p50 ms | p95 ms | p99 ms | 5xx / timeouts / 429 | Dropped | CPU busy |
+|---:|---:|---:|---:|---:|---:|---|---:|---:|
+| 1 | 5 | 19.7 | 43 | 286 (login warm-up) | 410 | 0 / 0 / 0 | 0 | 31% |
+| 2 | 10 | 38.2 | 40 | 129 | 279 | 0 / 0 / 0 | 0 | 33% |
+| 3 | 15 | 58.3 | 41 | 117 | 260 | 0 / 0 / 0 | 0 | 46% |
+| 4 | 20 | 77.9 | 47 | 132 | 251 | 0 / 0 / 0 | 0 | 58% |
+| 5 | 30 | 113.3 | 104 | 247 | 325 | 0 / 0 / 0 | 0 | 65% |
+| 6 | 40 | 113.5 | 715 | 4,882 | 6,193 | 0 / 0 / 0 | 422 | 73% |
+
+Aborted 11 s into step 7 (p95 over 3 s). No 5xx, timeouts, rate limiting, worker timeouts,
+pool errors or swapping at any step.
+
+**Ceiling: about 113 requests per second.** Throughput stopped rising between steps 5 and 6.
+**Knee: between 78 and 113 requests per second**: latency was flat through step 4 and
+doubled at step 5.
+
+**Bottleneck: worker slots, not CPU or database.** Server-side times stayed at baseline
+levels throughout (operations dashboard p95 124 ms, database p95 at most 59 ms on any route)
+while client-side p95 reached several seconds: requests were queued waiting for one of the
+4 sync workers. Throughput matches workers / mean service time (4 / ~35 ms ≈ 113 req/s).
+CPU was 65-73% busy: each sync worker uses one core, so 4 workers cannot use all 8 threads.
+
+**Login cost under load:** each login holds a worker for about 200 ms (Argon2), roughly 8x
+an average request; at step 5, cold logins alone consumed about 15% of worker capacity. Login
+bursts compete with all other traffic.
+
+**Overload behaviour:** past the ceiling, sync gunicorn queues requests (socket backlog)
+rather than failing fast, so users see multi-second waits instead of errors. Production must
+run below the knee, with scaling triggered on latency or worker utilisation.
+
+**Hypothesis to confirm:** more workers raise the ceiling until CPU saturates (section 5).

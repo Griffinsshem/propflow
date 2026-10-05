@@ -1,10 +1,14 @@
 /*
- * PropFlow load test (spec section 55): the core user journeys against seeded data.
+ * PropFlow load tests (spec section 55): the core user journeys against seeded data.
+ *
+ * Profiles:
+ *   smoke, profile, baseline: fixed users with human think time (realistic pace)
+ *   stress: journeys started at a rising rate, in steps, until the system falls behind
  *
  * Every rate limit stays on. Each virtual user gets its own client IP via X-Forwarded-For
  * (the server trusts one proxy hop for this run), as real users would have in production.
  *
- * Usage (from the repo root): k6 run -e PROFILE=smoke|baseline load-tests/journeys.js
+ * Usage (from the repo root): k6 run -e PROFILE=<profile> load-tests/journeys.js
  */
 import http from 'k6/http';
 import exec from 'k6/execution';
@@ -17,10 +21,12 @@ const ROOT = __ENV.BASE_URL || 'http://127.0.0.1:8000';
 const API = `${ROOT}/api/v1`;
 const PROFILE = __ENV.PROFILE || 'baseline';
 const PASSWORD = JSON.parse(open('./accounts.json')).password;
-// Seeder defaults (backend/scripts/seed_load_data.py), used to address every tenant for cold logins.
+// Seeder defaults (backend/scripts/seed_load_data.py): every tenant email can be derived.
 const PROPERTIES_PER_ORG = 8;
 const UNITS_PER_PROPERTY = 40;
 const DOMAIN = 'load.propflow.test';
+// Product limit is 20 reports per hour per user; stay under it so no 429 is test-made.
+const MAX_REPORTS_PER_ACCOUNT = 15;
 
 function pool(role) {
   return new SharedArray(role, () => {
@@ -37,8 +43,14 @@ function pool(role) {
 const OWNERS = pool('owner');
 const MANAGERS = pool('managers');
 const CONTRACTORS = pool('contractors');
-const TENANTS = pool('tenants');
 const ORG_COUNT = OWNERS.length;
+
+function tenantEmail(index) {
+  const org = index % ORG_COUNT;
+  const property = Math.floor(index / ORG_COUNT) % PROPERTIES_PER_ORG;
+  const unit = Math.floor(index / (ORG_COUNT * PROPERTIES_PER_ORG)) % UNITS_PER_PROPERTY;
+  return `tenant.${org}.${property}.${unit}@${DOMAIN}`;
+}
 
 const rateLimited = new Counter('rate_limited_responses');
 const conflicts = new Counter('conflict_responses');
@@ -60,14 +72,22 @@ const BUDGETS_MS = {
   'POST /work-orders/{id}/status': 500,
 };
 
-const PROFILES = {
+const USER_PROFILES = {
   smoke: { ramp: '10s', hold: '30s', tenants: 2, managers: 1, contractors: 1, owners: 1, loginRate: 1 },
   // Same mix as baseline, shorter: enough samples to profile individual endpoints.
   profile: { ramp: '1m', hold: '3m', tenants: 40, managers: 15, contractors: 15, owners: 5, loginRate: 1 },
   baseline: { ramp: '2m', hold: '8m', tenants: 40, managers: 15, contractors: 15, owners: 5, loginRate: 1 },
 };
-const P = PROFILES[PROFILE];
-if (!P) throw new Error(`Unknown PROFILE: ${PROFILE}`);
+
+const STRESS = {
+  steps: [5, 10, 15, 20, 30, 40, 50, 60], // journeys started per second, all roles together
+  stepRamp: '15s',
+  stepHold: '60s',
+};
+
+const IS_STRESS = PROFILE === 'stress';
+const P = USER_PROFILES[PROFILE];
+if (!IS_STRESS && !P) throw new Error(`Unknown PROFILE: ${PROFILE}`);
 
 function users(fn, target) {
   return {
@@ -83,46 +103,77 @@ function users(fn, target) {
   };
 }
 
-const endpointThresholds = {};
+function arrivals(fn, share, maxVUs) {
+  const stages = [];
+  for (const perSecond of STRESS.steps) {
+    const perMinute = Math.max(1, Math.round(perSecond * 60 * share));
+    stages.push({ duration: STRESS.stepRamp, target: perMinute });
+    stages.push({ duration: STRESS.stepHold, target: perMinute });
+  }
+  return {
+    executor: 'ramping-arrival-rate',
+    exec: fn,
+    startRate: 0,
+    timeUnit: '1m',
+    preAllocatedVUs: Math.ceil(maxVUs / 4),
+    maxVUs,
+    stages,
+  };
+}
+
+const scenarios = IS_STRESS
+  ? {
+      tenants: arrivals('tenantJourney', 0.5, 200),
+      managers: arrivals('managerJourney', 0.2, 100),
+      contractors: arrivals('contractorJourney', 0.15, 80),
+      owners: arrivals('ownerJourney', 0.05, 30),
+      logins: arrivals('coldLogin', 0.1, 60),
+    }
+  : {
+      tenants: users('tenantJourney', P.tenants),
+      managers: users('managerJourney', P.managers),
+      contractors: users('contractorJourney', P.contractors),
+      owners: users('ownerJourney', P.owners),
+      logins: {
+        executor: 'constant-arrival-rate',
+        exec: 'coldLogin',
+        rate: P.loginRate,
+        timeUnit: '1s',
+        startTime: P.ramp,
+        duration: P.hold,
+        preAllocatedVUs: 5,
+        maxVUs: 20,
+      },
+    };
+
+const thresholds = {
+  http_req_failed: ['rate<0.01'],
+  checks: ['rate>0.99'],
+  rate_limited_responses: ['count==0'],
+};
 for (const [name, ms] of Object.entries(BUDGETS_MS)) {
-  endpointThresholds[`http_req_duration{name:${name}}`] = [`p(95)<${ms}`];
+  thresholds[`http_req_duration{name:${name}}`] = [`p(95)<${ms}`];
+}
+if (IS_STRESS) {
+  // Stop once clearly overloaded: past this point the numbers only measure the queue.
+  thresholds.http_req_failed = [{ threshold: 'rate<0.05', abortOnFail: true, delayAbortEval: '30s' }];
+  thresholds.http_req_duration = [{ threshold: 'p(95)<3000', abortOnFail: true, delayAbortEval: '30s' }];
 }
 
 export const options = {
-  scenarios: {
-    tenants: users('tenantJourney', P.tenants),
-    managers: users('managerJourney', P.managers),
-    contractors: users('contractorJourney', P.contractors),
-    owners: users('ownerJourney', P.owners),
-    logins: {
-      executor: 'constant-arrival-rate',
-      exec: 'coldLogin',
-      rate: P.loginRate,
-      timeUnit: '1s',
-      startTime: P.ramp,
-      duration: P.hold,
-      preAllocatedVUs: 5,
-      maxVUs: 20,
-    },
-  },
+  scenarios,
   // k6 clears each VU's cookies between iterations by default; a real browser keeps its
   // session, so the session cookie must survive across iterations.
   noCookiesReset: true,
   summaryTrendStats: ['count', 'avg', 'med', 'p(95)', 'p(99)', 'max'],
-  thresholds: Object.assign(
-    {
-      http_req_failed: ['rate<0.01'],
-      checks: ['rate>0.99'],
-      rate_limited_responses: ['count==0'],
-    },
-    endpointThresholds,
-  ),
+  thresholds,
 };
 
 // --- per-VU helpers (each VU has its own JS runtime, cookie jar and session) ---------------
 
 let csrf = null;
 let warnings = 0;
+let reported = 0;
 
 function clientIp() {
   const id = exec.vu.idInTest;
@@ -134,39 +185,42 @@ function headers(extra) {
 }
 
 function track(res, expected, label) {
-  if (res.status !== expected && warnings < 3) {
-    warnings += 1;  // a few per VU: enough to diagnose without flooding the output
-    console.warn(`${label}: expected ${expected}, got ${res.status} ${res.body ? res.body.slice(0, 200) : ''}`);
-  }
+  const allowed = Array.isArray(expected) ? expected : [expected];
   if (res.status === 429) rateLimited.add(1);
   if (res.status === 409) conflicts.add(1);
-  return check(res, { [`${label}: ${expected}`]: (r) => r.status === expected });
+  const ok = allowed.includes(res.status);
+  if (!ok && warnings < 3) {
+    warnings += 1; // a few per VU: enough to diagnose without flooding the output
+    console.warn(`${label}: expected ${allowed.join('/')}, got ${res.status} ${res.body ? res.body.slice(0, 200) : ''}`);
+  }
+  return check(res, { [`${label}: ${allowed.join('/')}`]: () => ok });
 }
 
 function get(path, name) {
   return http.get(`${API}${path}`, { headers: headers(), tags: { name } });
 }
 
-function post(path, body, name) {
-  return http.post(`${API}${path}`, JSON.stringify(body), {
-    headers: headers({ 'X-CSRF-Token': csrf }),
-    tags: { name },
-  });
+// Status changes may lose an optimistic-concurrency race (409): correct behaviour, not failure.
+const CONFLICT_OK = http.expectedStatuses({ min: 200, max: 399 }, 409);
+
+function post(path, body, name, allowConflict) {
+  const params = { headers: headers({ 'X-CSRF-Token': csrf }), tags: { name } };
+  if (allowConflict) params.responseCallback = CONFLICT_OK;
+  return http.post(`${API}${path}`, JSON.stringify(body), params);
 }
 
 function think(min, max) {
-  sleep(min + Math.random() * (max - min));
+  if (!IS_STRESS) sleep(min + Math.random() * (max - min));
 }
 
-function signIn(accounts) {
+function signIn(email) {
   if (csrf) return true;
-  const email = accounts[(exec.vu.idInTest - 1) % accounts.length];
   const res = http.post(`${API}/auth/login`, JSON.stringify({ email, password: PASSWORD }), {
     headers: headers(),
     tags: { name: 'POST /auth/login' },
   });
   if (!track(res, 200, 'login')) {
-    think(1, 3);
+    sleep(1);
     return false;
   }
   const cookies = http.cookieJar().cookiesForURL(ROOT);
@@ -174,12 +228,16 @@ function signIn(accounts) {
   return csrf !== null;
 }
 
+function vuIndex() {
+  return exec.vu.idInTest - 1;
+}
+
 // --- journeys ------------------------------------------------------------------------------
 
 const CATEGORIES = ['plumbing', 'electrical', 'water', 'appliance', 'security', 'other'];
 
 export function tenantJourney() {
-  if (!signIn(TENANTS)) return;
+  if (!signIn(tenantEmail(vuIndex()))) return;
   track(get('/dashboard/tenant', 'GET /dashboard/tenant'), 200, 'tenant dashboard');
   think(2, 5);
   const mine = get('/maintenance?limit=10', 'GET /maintenance');
@@ -190,7 +248,8 @@ export function tenantJourney() {
     }
   }
   track(get('/notifications/unread-count', 'GET /notifications/unread-count'), 200, 'unread count');
-  if (Math.random() < 0.2) {
+  if (reported < MAX_REPORTS_PER_ACCOUNT && Math.random() < 0.2) {
+    reported += 1;
     think(5, 10); // writing the report
     const report = {
       category: CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)],
@@ -203,7 +262,7 @@ export function tenantJourney() {
 }
 
 export function managerJourney() {
-  if (!signIn(MANAGERS)) return;
+  if (!signIn(MANAGERS[vuIndex() % MANAGERS.length])) return;
   track(get('/dashboard/operations', 'GET /dashboard/operations'), 200, 'operations dashboard');
   think(2, 5);
   const inbox = get('/maintenance?status=submitted&limit=25', 'GET /maintenance');
@@ -215,7 +274,8 @@ export function managerJourney() {
       if (track(detail, 200, 'request detail') && detail.json('allowed_transitions').includes('triaged')) {
         think(3, 8); // reading the report before triaging
         const body = { status: 'triaged', version: detail.json('version') };
-        track(post(`/maintenance/${target.id}/status`, body, 'POST /maintenance/{id}/status'), 200, 'triage');
+        const moved = post(`/maintenance/${target.id}/status`, body, 'POST /maintenance/{id}/status', true);
+        track(moved, [200, 409], 'triage');
       }
     }
   }
@@ -232,7 +292,7 @@ const CONTRACTOR_STEPS = [
 ];
 
 export function contractorJourney() {
-  if (!signIn(CONTRACTORS)) return;
+  if (!signIn(CONTRACTORS[vuIndex() % CONTRACTORS.length])) return;
   track(get('/dashboard/contractor', 'GET /dashboard/contractor'), 200, 'contractor dashboard');
   think(2, 5);
   const [from, to] = CONTRACTOR_STEPS[Math.floor(Math.random() * CONTRACTOR_STEPS.length)];
@@ -241,16 +301,17 @@ export function contractorJourney() {
     const items = jobs.json('items');
     if (items.length > 0) {
       think(3, 8);
-      const job = items[0];
+      const job = items[Math.floor(Math.random() * items.length)];
       const body = { status: to, version: job.version };
-      track(post(`/work-orders/${job.id}/status`, body, 'POST /work-orders/{id}/status'), 200, `work order ${to}`);
+      const moved = post(`/work-orders/${job.id}/status`, body, 'POST /work-orders/{id}/status', true);
+      track(moved, [200, 409], `work order ${to}`);
     }
   }
   think(5, 10);
 }
 
 export function ownerJourney() {
-  if (!signIn(OWNERS)) return;
+  if (!signIn(OWNERS[vuIndex() % OWNERS.length])) return;
   track(get('/dashboard/organization', 'GET /dashboard/organization'), 200, 'organization dashboard');
   think(3, 6);
   track(get('/dashboard/operations', 'GET /dashboard/operations'), 200, 'operations dashboard');
@@ -262,11 +323,7 @@ export function ownerJourney() {
 export function coldLogin() {
   // A new browser each time, cycling through all seeded tenants, each from its own IP.
   const i = exec.scenario.iterationInTest;
-  const org = i % ORG_COUNT;
-  const property = Math.floor(i / ORG_COUNT) % PROPERTIES_PER_ORG;
-  const unit = Math.floor(i / (ORG_COUNT * PROPERTIES_PER_ORG)) % UNITS_PER_PROPERTY;
-  const email = `tenant.${org}.${property}.${unit}@${DOMAIN}`;
-  const res = http.post(`${API}/auth/login`, JSON.stringify({ email, password: PASSWORD }), {
+  const res = http.post(`${API}/auth/login`, JSON.stringify({ email: tenantEmail(i), password: PASSWORD }), {
     jar: new http.CookieJar(),
     headers: {
       'Content-Type': 'application/json',
