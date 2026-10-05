@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import Select, false, select
+from sqlalchemy import ColumnElement, Select, and_, false, select
 
 from app.auth.models import User
 from app.authz.context import OrgContext
@@ -55,17 +55,32 @@ def _contractor_request_ids(context: OrgContext) -> Select[uuid.UUID]:
     )
 
 
-def visible_requests(context: OrgContext) -> RequestSelect:
-    stmt = _request_rows(context.organization_id)
+def _scope_condition(context: OrgContext) -> ColumnElement[bool]:
+    """The visibility rule itself: one condition on maintenance_requests (subqueries, no joins)."""
+    in_org = MaintenanceRequest.organization_id == context.organization_id
     if context.role == MembershipRole.OWNER:
-        return stmt
+        return in_org
     if context.role == MembershipRole.MANAGER:
-        return stmt.where(MaintenanceRequest.property_id.in_(assigned_property_ids(context)))
+        return and_(in_org, MaintenanceRequest.property_id.in_(assigned_property_ids(context)))
     if context.role == MembershipRole.TENANT:
-        return stmt.where(MaintenanceRequest.reported_by_membership_id == context.membership_id)
+        return and_(in_org, MaintenanceRequest.reported_by_membership_id == context.membership_id)
     if context.role == MembershipRole.CONTRACTOR:
-        return stmt.where(MaintenanceRequest.id.in_(_contractor_request_ids(context)))
-    return stmt.where(false())
+        return and_(in_org, MaintenanceRequest.id.in_(_contractor_request_ids(context)))
+    return false()
+
+
+def visible_requests(context: OrgContext) -> RequestSelect:
+    """Visible requests with display joins (property, unit, reporter): lists and details."""
+    return _request_rows(context.organization_id).where(_scope_condition(context))
+
+
+def scoped_requests(context: OrgContext) -> Select[MaintenanceRequest]:
+    """The same visibility without display joins: counts and aggregates.
+
+    Inner joins can't be dropped by the planner, so aggregating over visible_requests would
+    scan platform-wide tables; this keeps aggregate cost proportional to the organization.
+    """
+    return select(MaintenanceRequest).where(_scope_condition(context))
 
 
 def get_visible_request(context: OrgContext, request_id: uuid.UUID) -> RequestRow | None:

@@ -57,7 +57,7 @@ def _request_counts(
     property_id: uuid.UUID | None = None,
     reporter_id: uuid.UUID | None = None,
 ) -> dict[str, int]:
-    scoped = maintenance_repository.visible_requests(context).with_only_columns(
+    scoped = maintenance_repository.scoped_requests(context).with_only_columns(
         MaintenanceRequest.status,
         MaintenanceRequest.priority,
         MaintenanceRequest.resolved_at,
@@ -86,11 +86,15 @@ def _request_counts(
 def _work_order_counts(
     context: OrgContext, *, property_id: uuid.UUID | None = None
 ) -> dict[str, int]:
-    scoped = work_orders_repository.visible_work_orders(context).with_only_columns(
+    scoped = work_orders_repository.scoped_work_orders(context).with_only_columns(
         WorkOrder.status, WorkOrder.due_date, WorkOrder.completed_at
     )
     if property_id is not None:
-        scoped = scoped.where(MaintenanceRequest.property_id == property_id)
+        requests_on_property = select(MaintenanceRequest.id).where(
+            MaintenanceRequest.organization_id == context.organization_id,
+            MaintenanceRequest.property_id == property_id,
+        )
+        scoped = scoped.where(WorkOrder.request_id.in_(requests_on_property))
     sub = scoped.subquery()
     today = _now().date()
     stmt = select(

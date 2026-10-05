@@ -28,3 +28,7 @@ out/
 
 # Celery beat local schedule state
 celerybeat-schedule*
+
+# Load testing: generated local accounts and run artifacts
+load-tests/accounts.json
+load-tests/results/

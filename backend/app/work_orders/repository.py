@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import Select, false, select
+from sqlalchemy import ColumnElement, Select, and_, false, select
 
 from app.auth.models import User
 from app.authz.context import OrgContext
@@ -39,18 +39,38 @@ def _rows(organization_id: uuid.UUID) -> WorkOrderSelect:
     )
 
 
-def visible_work_orders(context: OrgContext) -> WorkOrderSelect:
-    stmt = _rows(context.organization_id)
+def _scope_condition(context: OrgContext) -> ColumnElement[bool]:
+    """The visibility rule itself: one condition on work_orders (subqueries, no joins)."""
+    in_org = WorkOrder.organization_id == context.organization_id
     if context.role == MembershipRole.OWNER:
-        return stmt
+        return in_org
     if context.role == MembershipRole.MANAGER:
-        return stmt.where(MaintenanceRequest.property_id.in_(assigned_property_ids(context)))
+        requests_in_scope = select(MaintenanceRequest.id).where(
+            MaintenanceRequest.organization_id == context.organization_id,
+            MaintenanceRequest.property_id.in_(assigned_property_ids(context)),
+        )
+        return and_(in_org, WorkOrder.request_id.in_(requests_in_scope))
     if context.role == MembershipRole.CONTRACTOR:
-        return stmt.where(
+        own_records = select(Contractor.id).where(
+            Contractor.organization_id == context.organization_id,
             Contractor.membership_id == context.membership_id,
+        )
+        return and_(
+            in_org,
+            WorkOrder.contractor_id.in_(own_records),
             WorkOrder.status.in_(CONTRACTOR_VISIBLE_STATUSES),
         )
-    return stmt.where(false())
+    return false()
+
+
+def visible_work_orders(context: OrgContext) -> WorkOrderSelect:
+    """Visible work orders with display joins (contractor, request, location)."""
+    return _rows(context.organization_id).where(_scope_condition(context))
+
+
+def scoped_work_orders(context: OrgContext) -> Select[WorkOrder]:
+    """The same visibility without display joins: counts and aggregates."""
+    return select(WorkOrder).where(_scope_condition(context))
 
 
 def _first(stmt: WorkOrderSelect) -> WorkOrderRow | None:
