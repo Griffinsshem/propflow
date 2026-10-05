@@ -47,7 +47,7 @@ the API origin directly; a compromised dependency.
 | Threat | Mitigation | Evidence | Residual risk |
 |---|---|---|---|
 | SQL injection | SQLAlchemy parameterized queries only; the one raw statement uses no input | bandit in CI | - |
-| XSS (stored, reflected, DOM) | Plain text stored verbatim; JSON only; `nosniff`; API CSP `default-src 'none'`; React escapes output | `test_maintenance.py` (markup round-trip), `security/test_hardening.py` | Frontend CSP pending (frontend phase) |
+| XSS (stored, reflected, DOM) | Plain text stored verbatim; JSON only; `nosniff`; API CSP `default-src 'none'`; React escapes output | `test_maintenance.py` (markup round-trip), `security/test_hardening.py` | Nonce-based script CSP on all pages (ADR 0016); inline styles allowed |
 | Malicious uploads | Decoded by Pillow, format must match, size and pixel bounds, re-encoded (strips EXIF/GPS and polyglot payloads), server-generated keys | `integration/test_attachments.py` | Images only; documents (V2) will need malware scanning |
 | Path traversal | Storage keys built only from server UUIDs | `test_attachments.py` | - |
 | SSRF, command injection | The API never fetches user-supplied URLs or runs shell commands | code review | Re-assess if webhooks or imports are added |
@@ -75,4 +75,4 @@ the API origin directly; a compromised dependency.
 ## Known gaps (tracked, not hidden)
 MFA and elevated-action confirmation for owners; suspicious-login detection; tamper-evident
 audit storage outside the database; row-level security; malware scanning for future document
-uploads; platform-administrator tooling; frontend CSP. Each is a roadmap item, not a claim.
+uploads; platform-administrator tooling. Each is a roadmap item, not a claim.
