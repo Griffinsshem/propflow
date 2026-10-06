@@ -12,10 +12,13 @@ const PNG = Buffer.from(
   "base64",
 );
 
-async function report(page: Page, title: string): Promise<void> {
+/** Staff choose a property; tenants never do (the API uses their tenancy). */
+async function report(page: Page, title: string, property?: string): Promise<void> {
   await page.goto("/maintenance/new");
-  const property = page.getByLabel("Property", { exact: true });
-  if (await property.count()) await property.selectOption({ index: 1 });
+  await expect(page.getByRole("heading", { level: 1, name: "Report an issue" })).toBeVisible();
+  if (property) {
+    await page.getByLabel("Property", { exact: true }).selectOption({ label: property });
+  }
   await page.getByLabel("Title").fill(title);
   await page.getByLabel("What's wrong?").fill("See the photo.");
   await page.getByRole("button", { name: "Submit report" }).click();
@@ -55,7 +58,7 @@ test("a tenant attaches a photo and the owner sees it", async ({ page, browser }
 test("files that are not photos are refused, before and after upload", async ({ page }) => {
   await ownerWithOrganization(page, "Refusal Estates");
   await createProperty(page, "Refusal House");
-  await report(page, "Leaking roof");
+  await report(page, "Leaking roof", "Refusal House");
   const picker = page.getByLabel("Add photos");
   const uploads = page.getByRole("list", { name: "Photo uploads" });
 
