@@ -15,3 +15,13 @@ Server-only settings (in `frontend/.env.local`, never `NEXT_PUBLIC_`):
 
 End-to-end runs register uniquely named `e2e-…@example.com` accounts. Registration is limited
 to 20 per hour per IP; clear local counters with `redis-cli -n 2 flushdb` if needed.
+
+## Conventions
+
+- **Organization-scoped cache keys** start with `["org", organizationId, ...]`. Switching
+  organizations removes every non-`auth` query before refetching, so data from two
+  organizations can never mix on screen.
+- **Navigation** (`src/features/navigation/nav.ts`) lists a section only once its page
+  exists, filtered by the active role. It is convenience, not security: the API authorizes
+  every request.
+- **End-to-end helpers** live in `e2e/support.ts`.

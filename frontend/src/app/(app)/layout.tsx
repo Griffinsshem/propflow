@@ -4,8 +4,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
-import { AppHeader } from "@/features/auth/app-header";
 import { useCurrentUser } from "@/features/auth/hooks";
+import { AppShell } from "@/features/navigation/app-shell";
 import { ApiError } from "@/lib/api/errors";
 
 /**
@@ -35,10 +35,5 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  return (
-    <div className="min-h-screen">
-      <AppHeader user={me.data} />
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
-    </div>
-  );
+  return <AppShell user={me.data}>{children}</AppShell>;
 }
