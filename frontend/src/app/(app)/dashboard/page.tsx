@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { useCurrentUser } from "@/features/auth/hooks";
 import { activeMembership } from "@/features/organizations/membership";
+import { MyHome } from "@/features/tenants/my-home";
 
 export default function DashboardPage() {
   const { data: user } = useCurrentUser();
@@ -18,8 +19,7 @@ export default function DashboardPage() {
         <section className="rounded-lg border border-dashed border-slate-300 bg-white p-6">
           <h2 className="font-semibold">No organization yet</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Create an organization to start managing properties, or accept an invitation from
-            one.
+            Create an organization to start managing properties, or accept an invitation from one.
           </p>
           <Link
             href="/organizations/new"
@@ -29,12 +29,15 @@ export default function DashboardPage() {
           </Link>
         </section>
       ) : active ? (
-        <section className="rounded-lg bg-white p-6 ring-1 ring-slate-200">
-          <h2 className="font-semibold">{active.organization_name}</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            You&apos;re signed in as <span className="capitalize">{active.role}</span>.
-          </p>
-        </section>
+        <>
+          <section className="rounded-lg bg-white p-6 ring-1 ring-slate-200">
+            <h2 className="font-semibold">{active.organization_name}</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              You&apos;re signed in as <span className="capitalize">{active.role}</span>.
+            </p>
+          </section>
+          {active.role === "tenant" ? <MyHome orgId={active.organization_id} /> : null}
+        </>
       ) : (
         <p className="text-sm text-slate-600">
           Choose an organization from the menu at the top to continue.

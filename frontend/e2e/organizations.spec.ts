@@ -14,12 +14,7 @@ test("an owner creates organizations, switches between them and renames one", as
 
   await page.getByRole("link", { name: "Create an organization" }).click();
   await createOrganization(page, "Riverside Estates");
-  await expect(nav.getByRole("link")).toHaveText([
-    "Dashboard",
-    "Properties",
-    "Team",
-    "Organization",
-  ]);
+  await expect(nav.getByRole("link")).toHaveText(["Dashboard", "Properties", "Tenants", "Team", "Organization"]);
   await expect(page.getByText("You're signed in as owner.")).toBeVisible();
 
   await page.getByRole("link", { name: "New organization" }).click();

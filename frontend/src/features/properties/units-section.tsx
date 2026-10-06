@@ -6,6 +6,7 @@ import { FormAlert } from "@/components/ui/form-alert";
 import { AddUnitForm } from "@/features/properties/add-unit-form";
 import { useBuildings, useUnits } from "@/features/properties/hooks";
 import { UNIT_STATUS_LABELS } from "@/features/properties/labels";
+import { useTenants } from "@/features/tenants/hooks";
 import { messageOf } from "@/lib/api/errors";
 
 type UnitsSectionProps = {
@@ -14,24 +15,24 @@ type UnitsSectionProps = {
   canEdit: boolean;
 };
 
-export function UnitsSection({
-  orgId,
-  propertyId,
-  canEdit,
-}: UnitsSectionProps) {
+export function UnitsSection({ orgId, propertyId, canEdit }: UnitsSectionProps) {
   const units = useUnits(orgId, propertyId);
   const buildings = useBuildings(orgId, propertyId);
+  const tenants = useTenants(orgId, { propertyId });
 
   if (units.isPending || buildings.isPending) {
     return <p className="text-sm text-slate-500">Loading…</p>;
   }
   if (units.isError) return <FormAlert>{messageOf(units.error)}</FormAlert>;
-  if (buildings.isError)
-    return <FormAlert>{messageOf(buildings.error)}</FormAlert>;
+  if (buildings.isError) return <FormAlert>{messageOf(buildings.error)}</FormAlert>;
 
-  const buildingName = new Map(
-    buildings.data.map((building) => [building.id, building.name]),
+  // Tenants are supplementary: if they fail to load, the units table still shows.
+  const tenantName = new Map(
+    (tenants.data?.items ?? []).flatMap((tenant) =>
+      tenant.unit ? [[tenant.unit.id, tenant.full_name] as const] : [],
+    ),
   );
+  const buildingName = new Map(buildings.data.map((building) => [building.id, building.name]));
   const sorted = [...units.data.items].sort((a, b) =>
     a.label.localeCompare(b.label, undefined, { numeric: true }),
   );
@@ -62,6 +63,9 @@ export function UnitsSection({
                 <th scope="col" className={cell}>
                   Status
                 </th>
+                <th scope="col" className={cell}>
+                  Tenant
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -80,13 +84,12 @@ export function UnitsSection({
                     )}
                   </td>
                   <td className={cell}>
-                    {unit.building_id
-                      ? (buildingName.get(unit.building_id) ?? "—")
-                      : "—"}
+                    {unit.building_id ? (buildingName.get(unit.building_id) ?? "—") : "—"}
                   </td>
                   <td className={cell}>{unit.floor ?? "—"}</td>
                   <td className={cell}>{unit.bedrooms ?? "—"}</td>
                   <td className={cell}>{UNIT_STATUS_LABELS[unit.status]}</td>
+                  <td className={cell}>{tenantName.get(unit.id) ?? "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -97,11 +100,7 @@ export function UnitsSection({
         <p className="text-sm text-slate-500">Showing the first 100 units.</p>
       ) : null}
       {canEdit ? (
-        <AddUnitForm
-          orgId={orgId}
-          propertyId={propertyId}
-          buildings={buildings.data}
-        />
+        <AddUnitForm orgId={orgId} propertyId={propertyId} buildings={buildings.data} />
       ) : null}
     </div>
   );

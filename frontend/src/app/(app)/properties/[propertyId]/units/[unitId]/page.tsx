@@ -8,6 +8,7 @@ import { useActiveMembership } from "@/features/organizations/use-active-members
 import { useBuildings, useUnit } from "@/features/properties/hooks";
 import { canManageUnits } from "@/features/properties/permissions";
 import { UnitEditForm } from "@/features/properties/unit-edit-form";
+import { UnitTenantSection } from "@/features/tenants/unit-tenant-section";
 import { ApiError, messageOf } from "@/lib/api/errors";
 
 export default function UnitPage() {
@@ -30,16 +31,10 @@ export default function UnitPage() {
   );
 
   if (!membership || orgId === null) {
-    return (
-      <p className="text-sm text-slate-600">Select an organization first.</p>
-    );
+    return <p className="text-sm text-slate-600">Select an organization first.</p>;
   }
   if (!canManageUnits(membership.role)) {
-    return (
-      <p className="text-sm text-slate-600">
-        Only owners and managers can edit units.
-      </p>
-    );
+    return <p className="text-sm text-slate-600">Only owners and managers can edit units.</p>;
   }
   if (unit.isPending || buildings.isPending) {
     return <p className="text-sm text-slate-500">Loading…</p>;
@@ -51,9 +46,7 @@ export default function UnitPage() {
       <div className="space-y-4">
         {backLink}
         <FormAlert>
-          {notFound
-            ? "This unit doesn't exist, or it isn't visible to you."
-            : messageOf(error)}
+          {notFound ? "This unit doesn't exist, or it isn't visible to you." : messageOf(error)}
         </FormAlert>
       </div>
     );
@@ -63,18 +56,25 @@ export default function UnitPage() {
     <div className="max-w-3xl space-y-6">
       <div className="space-y-1">
         {backLink}
-        <h1 className="text-2xl font-bold tracking-tight">
-          Unit {unit.data.label}
-        </h1>
+        <h1 className="text-2xl font-bold tracking-tight">Unit {unit.data.label}</h1>
       </div>
       <div className="rounded-lg bg-white p-6 ring-1 ring-slate-200">
         <UnitEditForm
-          key={unit.data.id}
+          key={`${unit.data.id}:${unit.data.version}`}
           orgId={orgId}
           unit={unit.data}
           buildings={buildings.data}
         />
       </div>
+      <section
+        aria-labelledby="tenant-heading"
+        className="space-y-4 rounded-lg bg-white p-6 ring-1 ring-slate-200"
+      >
+        <h2 id="tenant-heading" className="font-semibold">
+          Tenant
+        </h2>
+        <UnitTenantSection orgId={orgId} unit={unit.data} />
+      </section>
     </div>
   );
 }
