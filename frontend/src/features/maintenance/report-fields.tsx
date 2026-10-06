@@ -58,6 +58,9 @@ export function ReportFields({ register, errors }: ReportFieldsProps) {
         error={errors.access_notes?.message}
         {...register("access_notes")}
       />
+      <p className="text-sm text-slate-500 sm:col-span-2">
+        You can add photos on the next page, after submitting.
+      </p>
     </div>
   );
 }

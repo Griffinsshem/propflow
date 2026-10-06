@@ -64,7 +64,9 @@ before creating the Blueprint: creating it starts billing.
 ## Verify (after the frontend is deployed)
 
 1. Set `PROXY_SHARED_SECRET` in Vercel (server-only) to the value Render generated in the
-   `propflow-shared` group.
+   `propflow-shared` group. Set `STORAGE_ORIGIN` (server-only) to the R2 endpoint origin,
+   the same host as `S3_ENDPOINT_URL`: the CSP allows exactly that origin for photo uploads
+   and display. Then upload a real photo to a request and confirm it shows as ready.
 2. **Proxy hop count:** log in through the frontend, then in the Render shell for the API:
    `flask shell` → read the newest `UserSession.ip_address`. It must equal your public IP
    (`curl ifconfig.me`). If it shows a Vercel or Render address, adjust

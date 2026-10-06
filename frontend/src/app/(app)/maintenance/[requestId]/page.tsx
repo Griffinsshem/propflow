@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 
 import { FormAlert } from "@/components/ui/form-alert";
 import { useMaintenanceRequest } from "@/features/maintenance/hooks";
+import { PhotoGallery } from "@/features/maintenance/photo-gallery";
+import { PhotoUploader } from "@/features/maintenance/photo-uploader";
 import { CATEGORY_LABELS, locationOf, PRIORITY_LABELS } from "@/features/maintenance/labels";
 import { StatusBadge } from "@/features/maintenance/status-badge";
 import { useActiveMembership } from "@/features/organizations/use-active-membership";
@@ -75,6 +77,18 @@ export default function MaintenanceRequestPage() {
             <h2 className="font-medium text-slate-900">Access notes</h2>
             <p className="whitespace-pre-wrap text-slate-700">{data.access_notes}</p>
           </div>
+        ) : null}
+      </section>
+      <section
+        aria-labelledby="photos-heading"
+        className="space-y-4 rounded-lg bg-white p-6 ring-1 ring-slate-200"
+      >
+        <h2 id="photos-heading" className="font-semibold">
+          Photos
+        </h2>
+        <PhotoGallery orgId={membership.organization_id} requestId={data.id} />
+        {data.status !== "closed" ? (
+          <PhotoUploader orgId={membership.organization_id} requestId={data.id} />
         ) : null}
       </section>
     </div>

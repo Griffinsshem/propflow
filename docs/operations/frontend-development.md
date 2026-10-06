@@ -4,7 +4,7 @@
 |---|---|
 | Run against the local API | API: `flask run --port 5000` (in `backend/`); then `npm run dev` |
 | Lint, types, unit tests | `npm run lint && npm run typecheck && npm run test` |
-| End-to-end tests | API: `EMAIL_BACKEND=file EMAIL_FILE_DIR=/tmp/propflow-mail TRUSTED_PROXY_COUNT=1 flask run --port 5000`; then `redis-cli -n 2 flushdb && npm run build && E2E_MAIL_DIR=/tmp/propflow-mail npx playwright test` |
+| End-to-end tests | API: `EMAIL_BACKEND=file EMAIL_FILE_DIR=/tmp/propflow-mail STORAGE_BACKEND=local LOCAL_STORAGE_DIR=/tmp/propflow-storage TRUSTED_PROXY_COUNT=1 flask run --port 5000`; then `redis-cli -n 2 flushdb && npm run build && E2E_MAIL_DIR=/tmp/propflow-mail npx playwright test` |
 
 Server-only settings (in `frontend/.env.local`, never `NEXT_PUBLIC_`):
 
