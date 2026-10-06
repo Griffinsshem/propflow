@@ -14,10 +14,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 VALID_ENVS = frozenset({"development", "test", "production"})
 INSECURE_SECRET_PLACEHOLDERS = frozenset({"", "replace-me", "change-me"})
 MIN_SECRET_LENGTH = 32
-EMAIL_BACKENDS = frozenset({"console", "memory", "disabled", "smtp"})
+EMAIL_BACKENDS = frozenset({"console", "memory", "disabled", "smtp", "file"})
 SMTP_SECURITY_MODES = frozenset({"starttls", "ssl", "none"})
 # These backends print or retain message bodies, which contain account-recovery tokens.
-NON_PRODUCTION_EMAIL_BACKENDS = frozenset({"console", "memory"})
+NON_PRODUCTION_EMAIL_BACKENDS = frozenset({"console", "memory", "file"})
 STORAGE_BACKENDS = frozenset({"s3", "memory"})
 
 # Local convenience: load the repo-root .env if it exists.
@@ -90,7 +90,7 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
     if email_backend not in EMAIL_BACKENDS:
         raise ConfigError(f"EMAIL_BACKEND must be one of {sorted(EMAIL_BACKENDS)}")
     if is_production and email_backend in NON_PRODUCTION_EMAIL_BACKENDS:
-        raise ConfigError("EMAIL_BACKEND console/memory would expose tokens in production")
+        raise ConfigError("EMAIL_BACKEND console/memory/file would expose tokens in production")
 
     proxy_secret = os.environ.get("PROXY_SHARED_SECRET", "").strip() or None
     trusts_proxy_headers = is_production and _int_env("TRUSTED_PROXY_COUNT", 0) > 0
@@ -148,6 +148,10 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
             "SMTP_PASSWORD": password,
             "SMTP_TIMEOUT_SECONDS": _int_env("SMTP_TIMEOUT_SECONDS", 15),
         }
+
+    email_file_dir = os.environ.get("EMAIL_FILE_DIR", "").strip() or None
+    if email_backend == "file" and email_file_dir is None:
+        raise ConfigError("EMAIL_FILE_DIR is required when EMAIL_BACKEND=file")
 
     return {
         "APP_ENV": env,
@@ -231,6 +235,7 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
         "STORAGE_BACKEND": storage_backend,
         **storage_settings,
         **smtp_settings,
+        "EMAIL_FILE_DIR": email_file_dir,
         "MAIL_FROM": os.environ.get("MAIL_FROM", "no-reply@propflow.local"),
         # Rate limiting (ADR 0004). Off in tests unless a test opts in.
         "RATELIMIT_ENABLED": not is_test,

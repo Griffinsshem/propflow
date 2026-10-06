@@ -155,3 +155,11 @@ def test_smtp_requires_a_real_sender_and_a_host(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.delenv("SMTP_HOST")
     with pytest.raises(ConfigError, match="SMTP_HOST"):
         build_config("production")
+
+
+@pytest.mark.usefixtures("production_env")
+def test_production_refuses_the_file_email_backend(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("EMAIL_BACKEND", "file")
+    monkeypatch.setenv("EMAIL_FILE_DIR", "/var/propflow-mail")
+    with pytest.raises(ConfigError, match="expose tokens"):
+        build_config("production")

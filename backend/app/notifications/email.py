@@ -6,11 +6,15 @@ provider can change without code changes (ADR 0015).
 
 from __future__ import annotations
 
+import json
 import smtplib
 import ssl
+import time
+import uuid
 from dataclasses import dataclass
 from email.message import EmailMessage as MimeMessage
 from email.utils import formatdate, make_msgid, parseaddr
+from pathlib import Path
 
 import structlog
 from flask import current_app, g, has_request_context
@@ -90,10 +94,26 @@ def _deliver_smtp(message: EmailMessage) -> None:
     logger.info("email_sent", recipient_domain=domain, subject=message.subject)
 
 
+def _deliver_file(message: EmailMessage) -> None:
+    """Development and end-to-end tests only (refused in production): one JSON file per email.
+
+    Written to a temporary name and renamed, so a reader never sees a half-written file.
+    """
+    directory = Path(current_app.config["EMAIL_FILE_DIR"])
+    directory.mkdir(parents=True, exist_ok=True)
+    name = f"{time.time_ns()}-{uuid.uuid4().hex}"
+    payload = {"to": message.to, "subject": message.subject, "body": message.body}
+    temporary = directory / f"{name}.tmp"
+    temporary.write_text(json.dumps(payload), encoding="utf-8")
+    temporary.replace(directory / f"{name}.json")
+
+
 def deliver_now(message: EmailMessage) -> None:
     backend = current_app.config["EMAIL_BACKEND"]
     if backend == "smtp":
         _deliver_smtp(message)
+    elif backend == "file":
+        _deliver_file(message)
     elif backend == "memory":
         current_app.extensions["outbox"].append(message)
     elif backend == "console":
