@@ -163,3 +163,11 @@ def test_production_refuses_the_file_email_backend(monkeypatch: pytest.MonkeyPat
     monkeypatch.setenv("EMAIL_FILE_DIR", "/var/propflow-mail")
     with pytest.raises(ConfigError, match="expose tokens"):
         build_config("production")
+
+
+@pytest.mark.usefixtures("production_env")
+def test_production_refuses_local_storage(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("STORAGE_BACKEND", "local")
+    monkeypatch.setenv("LOCAL_STORAGE_DIR", "/var/propflow-storage")
+    with pytest.raises(ConfigError, match="STORAGE_BACKEND must be s3"):
+        build_config("production")

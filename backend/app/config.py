@@ -18,7 +18,7 @@ EMAIL_BACKENDS = frozenset({"console", "memory", "disabled", "smtp", "file"})
 SMTP_SECURITY_MODES = frozenset({"starttls", "ssl", "none"})
 # These backends print or retain message bodies, which contain account-recovery tokens.
 NON_PRODUCTION_EMAIL_BACKENDS = frozenset({"console", "memory", "file"})
-STORAGE_BACKENDS = frozenset({"s3", "memory"})
+STORAGE_BACKENDS = frozenset({"s3", "memory", "local"})
 
 # Local convenience: load the repo-root .env if it exists.
 # override=False means real environment variables (Render, CI) always win.
@@ -117,6 +117,8 @@ def build_config(app_env: str | None = None) -> dict[str, Any]:
     if is_production and storage_backend != "s3":
         raise ConfigError("STORAGE_BACKEND must be s3 in production")
     storage_settings: dict[str, Any] = {}
+    if storage_backend == "local":
+        storage_settings = {"LOCAL_STORAGE_DIR": _require("LOCAL_STORAGE_DIR")}
     if storage_backend == "s3":
         storage_settings = {
             "S3_ENDPOINT_URL": os.environ.get("S3_ENDPOINT_URL", "").strip() or None,
