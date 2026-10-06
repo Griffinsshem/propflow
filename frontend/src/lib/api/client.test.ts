@@ -11,7 +11,8 @@ function jsonResponse(status: number, body: unknown): Response {
 }
 
 afterEach(() => {
-  document.cookie = "propflow_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+  document.cookie =
+    "propflow_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
 });
 
 describe("apiRequest", () => {
@@ -24,7 +25,9 @@ describe("apiRequest", () => {
     await apiRequest("/auth/me");
 
     const calls = fetchMock.mock.calls as unknown as [string, RequestInit][];
-    expect(new Headers(calls[0][1].headers).get("X-CSRF-Token")).toBe("token-123");
+    expect(new Headers(calls[0][1].headers).get("X-CSRF-Token")).toBe(
+      "token-123",
+    );
     expect(new Headers(calls[1][1].headers).get("X-CSRF-Token")).toBeNull();
     expect(calls[0][0]).toBe("/api/v1/auth/logout");
   });
@@ -43,9 +46,10 @@ describe("apiRequest", () => {
         }),
       ),
     );
-    const error = await apiRequest("/auth/register", { method: "POST", body: {} }).catch(
-      (caught: unknown) => caught,
-    );
+    const error = await apiRequest("/auth/register", {
+      method: "POST",
+      body: {},
+    }).catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({
       status: 422,
@@ -62,11 +66,19 @@ describe("apiRequest", () => {
         throw new TypeError("Failed to fetch");
       }),
     );
-    await expect(apiRequest("/auth/me")).rejects.toMatchObject({ status: 0, code: "NETWORK_ERROR" });
+    await expect(apiRequest("/auth/me")).rejects.toMatchObject({
+      status: 0,
+      code: "NETWORK_ERROR",
+    });
   });
 
   it("returns nothing for 204 responses", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(null, { status: 204 })));
-    await expect(apiRequest("/auth/logout", { method: "POST" })).resolves.toBeUndefined();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(null, { status: 204 })),
+    );
+    await expect(
+      apiRequest("/auth/logout", { method: "POST" }),
+    ).resolves.toBeUndefined();
   });
 });

@@ -27,7 +27,10 @@ export function OrganizationSwitcher({ user }: { user: CurrentUser }) {
           </option>
         ) : null}
         {user.memberships.map((membership) => (
-          <option key={membership.organization_id} value={membership.organization_id}>
+          <option
+            key={membership.organization_id}
+            value={membership.organization_id}
+          >
             {membership.organization_name}
           </option>
         ))}

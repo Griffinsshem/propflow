@@ -21,7 +21,8 @@ export function useCreateOrganization() {
   return useMutation({
     mutationFn: organizationsApi.create,
     // The API also switches the session to the new organization.
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: CURRENT_USER_KEY }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: CURRENT_USER_KEY }),
   });
 }
 
@@ -31,7 +32,9 @@ export function useActivateOrganization() {
     mutationFn: organizationsApi.activate,
     onSuccess: async () => {
       // Everything cached belongs to the previous organization: drop it before refetching.
-      queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== "auth" });
+      queryClient.removeQueries({
+        predicate: (query) => query.queryKey[0] !== "auth",
+      });
       await queryClient.invalidateQueries({ queryKey: CURRENT_USER_KEY });
     },
   });

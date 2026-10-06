@@ -16,6 +16,7 @@ test("an owner creates organizations, switches between them and renames one", as
   await createOrganization(page, "Riverside Estates");
   await expect(nav.getByRole("link")).toHaveText([
     "Dashboard",
+    "Properties",
     "Team",
     "Organization",
   ]);

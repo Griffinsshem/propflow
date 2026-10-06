@@ -7,11 +7,20 @@ type TextFieldProps = ComponentProps<"input"> & {
   hint?: string;
 };
 
-export function TextField({ id, label, error, hint, className = "", ...input }: TextFieldProps) {
+export function TextField({
+  id,
+  label,
+  error,
+  hint,
+  className = "",
+  ...input
+}: TextFieldProps) {
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
   const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
-  const ring = error ? "ring-red-400 focus:ring-red-500" : "ring-slate-300 focus:ring-indigo-600";
+  const ring = error
+    ? "ring-red-400 focus:ring-red-500"
+    : "ring-slate-300 focus:ring-indigo-600";
   return (
     <div className={className}>
       <label htmlFor={id} className="block text-sm font-medium text-slate-900">

@@ -25,3 +25,8 @@ to 20 per hour per IP; clear local counters with `redis-cli -n 2 flushdb` if nee
   exists, filtered by the active role. It is convenience, not security: the API authorizes
   every request.
 - **End-to-end helpers** live in `e2e/support.ts`.
+- **Concurrent edits** (`src/lib/conflict.ts`): saves send only changed fields plus the
+  version they started from. A `409` whose record version moved shows the other person's
+  changes; "Keep my changes" keeps only the fields this user edited and takes theirs for the
+  rest, so a save never silently reverts someone else's work. A `409` without a version change
+  (for example a duplicate label) is an ordinary error.

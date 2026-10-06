@@ -27,7 +27,11 @@ export class ApiError extends Error {
     );
   }
 
-  static fromResponse(status: number, payload: unknown, headerRequestId: string | null): ApiError {
+  static fromResponse(
+    status: number,
+    payload: unknown,
+    headerRequestId: string | null,
+  ): ApiError {
     const body = errorBodyOf(payload);
     return new ApiError(
       status,
@@ -40,9 +44,12 @@ export class ApiError extends Error {
 }
 
 function errorBodyOf(payload: unknown): ErrorBody | null {
-  if (typeof payload !== "object" || payload === null || !("error" in payload)) return null;
+  if (typeof payload !== "object" || payload === null || !("error" in payload))
+    return null;
   const error = (payload as { error: unknown }).error;
-  return typeof error === "object" && error !== null ? (error as ErrorBody) : null;
+  return typeof error === "object" && error !== null
+    ? (error as ErrorBody)
+    : null;
 }
 
 /** 422 details look like {"json": {"email": ["Not a valid email address."]}}: drop the location. */
@@ -53,7 +60,9 @@ export function fieldErrorsFrom(details: unknown): FieldErrors {
     if (typeof location !== "object" || location === null) continue;
     for (const [field, messages] of Object.entries(location)) {
       if (Array.isArray(messages)) {
-        result[field] = messages.filter((message): message is string => typeof message === "string");
+        result[field] = messages.filter(
+          (message): message is string => typeof message === "string",
+        );
       }
     }
   }
@@ -62,5 +71,7 @@ export function fieldErrorsFrom(details: unknown): FieldErrors {
 
 /** A user-facing message for any failure. */
 export function messageOf(error: unknown): string {
-  return error instanceof ApiError ? error.message : "Something went wrong. Please try again.";
+  return error instanceof ApiError
+    ? error.message
+    : "Something went wrong. Please try again.";
 }

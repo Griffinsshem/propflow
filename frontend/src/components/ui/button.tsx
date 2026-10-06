@@ -6,7 +6,8 @@ type ButtonProps = ComponentProps<"button"> & {
 };
 
 const VARIANTS = {
-  primary: "bg-indigo-600 text-white hover:bg-indigo-500 focus-visible:outline-indigo-600",
+  primary:
+    "bg-indigo-600 text-white hover:bg-indigo-500 focus-visible:outline-indigo-600",
   secondary:
     "bg-white text-slate-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus-visible:outline-slate-400",
 };

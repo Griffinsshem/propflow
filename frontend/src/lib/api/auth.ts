@@ -22,7 +22,8 @@ export type RegisterInput = LoginInput & { full_name: string };
 
 export const authApi = {
   me: (signal?: AbortSignal) => apiRequest<CurrentUser>("/auth/me", { signal }),
-  login: (body: LoginInput) => apiRequest<CurrentUser>("/auth/login", { method: "POST", body }),
+  login: (body: LoginInput) =>
+    apiRequest<CurrentUser>("/auth/login", { method: "POST", body }),
   register: (body: RegisterInput) =>
     apiRequest<CurrentUser>("/auth/register", { method: "POST", body }),
   logout: () => apiRequest<void>("/auth/logout", { method: "POST" }),

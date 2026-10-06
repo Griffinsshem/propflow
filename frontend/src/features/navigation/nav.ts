@@ -10,11 +10,17 @@ const EVERYONE: readonly Role[] = ["owner", "manager", "tenant", "contractor"];
  */
 export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/dashboard", label: "Dashboard", roles: EVERYONE },
+  { href: "/properties", label: "Properties", roles: ["owner", "manager"] },
   { href: "/settings/team", label: "Team", roles: ["owner", "manager"] },
-  { href: "/settings/organization", label: "Organization", roles: ["owner", "manager"] },
+  {
+    href: "/settings/organization",
+    label: "Organization",
+    roles: ["owner", "manager"],
+  },
 ];
 
 export function navFor(role: Role | null): NavItem[] {
-  if (role === null) return NAV_ITEMS.filter((item) => item.href === "/dashboard");
+  if (role === null)
+    return NAV_ITEMS.filter((item) => item.href === "/dashboard");
   return NAV_ITEMS.filter((item) => item.roles.includes(role));
 }

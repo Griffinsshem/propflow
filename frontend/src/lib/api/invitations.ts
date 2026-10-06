@@ -27,10 +27,18 @@ export const invitationsApi = {
   create: (body: { email: string; role: Role }) =>
     apiRequest<Invitation>("/invitations", { method: "POST", body }),
   revoke: (id: string) =>
-    apiRequest<Invitation>(`/invitations/${encodeURIComponent(id)}/revoke`, { method: "POST" }),
+    apiRequest<Invitation>(`/invitations/${encodeURIComponent(id)}/revoke`, {
+      method: "POST",
+    }),
   // Tokens travel in request bodies, never in URLs that servers could log.
   preview: (token: string) =>
-    apiRequest<InvitationPreview>("/invitations/preview", { method: "POST", body: { token } }),
+    apiRequest<InvitationPreview>("/invitations/preview", {
+      method: "POST",
+      body: { token },
+    }),
   accept: (token: string) =>
-    apiRequest<Organization>("/invitations/accept", { method: "POST", body: { token } }),
+    apiRequest<Organization>("/invitations/accept", {
+      method: "POST",
+      body: { token },
+    }),
 };

@@ -15,7 +15,11 @@ import {
 import { ApiError } from "@/lib/api/errors";
 import type { Organization } from "@/lib/api/organizations";
 
-export function RenameOrganizationForm({ organization }: { organization: Organization }) {
+export function RenameOrganizationForm({
+  organization,
+}: {
+  organization: Organization;
+}) {
   const rename = useRenameOrganization();
   const [saved, setSaved] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -35,7 +39,9 @@ export function RenameOrganizationForm({ organization }: { organization: Organiz
       await rename.mutateAsync({ id: organization.id, name });
       setSaved(true);
     } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : "Something went wrong.");
+      setFormError(
+        error instanceof ApiError ? error.message : "Something went wrong.",
+      );
     }
   });
 
