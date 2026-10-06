@@ -59,3 +59,8 @@ export function fieldErrorsFrom(details: unknown): FieldErrors {
   }
   return result;
 }
+
+/** A user-facing message for any failure. */
+export function messageOf(error: unknown): string {
+  return error instanceof ApiError ? error.message : "Something went wrong. Please try again.";
+}

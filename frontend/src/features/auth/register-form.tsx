@@ -15,7 +15,19 @@ import { ApiError } from "@/lib/api/errors";
 
 const FIELDS = ["full_name", "email", "password"] as const;
 
-export function RegisterForm() {
+type RegisterFormProps = {
+  /** Locks the email field to this address. */
+  email?: string;
+  /** Runs after the account is created, instead of redirecting. */
+  onSuccess?: () => Promise<void>;
+  showLoginLink?: boolean;
+};
+
+export function RegisterForm({
+  email,
+  onSuccess,
+  showLoginLink = true,
+}: RegisterFormProps) {
   const router = useRouter();
   const registerAccount = useRegister();
   const [formError, setFormError] = useState<string | null>(null);
@@ -26,14 +38,13 @@ export function RegisterForm() {
     formState: { errors, isSubmitting },
   } = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { full_name: "", email: "", password: "" },
+    defaultValues: { full_name: "", email: email ?? "", password: "" },
   });
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
     try {
       await registerAccount.mutateAsync(values);
-      router.replace("/dashboard");
     } catch (error) {
       if (!(error instanceof ApiError)) {
         setFormError("Something went wrong. Please try again.");
@@ -44,7 +55,9 @@ export function RegisterForm() {
         return;
       }
       if (error.status === 429) {
-        setFormError("Too many sign-up attempts from this network. Please try again later.");
+        setFormError(
+          "Too many sign-up attempts from this network. Please try again later.",
+        );
         return;
       }
       let placed = false;
@@ -56,7 +69,10 @@ export function RegisterForm() {
         }
       }
       if (!placed) setFormError(error.message);
+      return;
     }
+    if (onSuccess) await onSuccess();
+    else router.replace("/dashboard");
   });
 
   return (
@@ -74,6 +90,7 @@ export function RegisterForm() {
         label="Email"
         type="email"
         autoComplete="email"
+        readOnly={email !== undefined}
         error={errors.email?.message}
         {...register("email")}
       />
@@ -89,12 +106,17 @@ export function RegisterForm() {
       <Button type="submit" pending={isSubmitting} className="w-full">
         {isSubmitting ? "Creating account…" : "Create account"}
       </Button>
-      <p className="text-center text-sm text-slate-600">
-        Already have an account?{" "}
-        <Link href="/login" className="font-semibold text-indigo-600 hover:text-indigo-500">
-          Sign in
-        </Link>
-      </p>
+      {showLoginLink ? (
+        <p className="text-center text-sm text-slate-600">
+          Already have an account?{" "}
+          <Link
+            href="/login"
+            className="font-semibold text-indigo-600 hover:text-indigo-500"
+          >
+            Sign in
+          </Link>
+        </p>
+      ) : null}
     </form>
   );
 }

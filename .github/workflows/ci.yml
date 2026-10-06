@@ -129,7 +129,9 @@ jobs:
       DATABASE_URL: postgresql+psycopg://propflow:ci-ephemeral-password@localhost:5432/propflow_e2e
       REDIS_URL: redis://localhost:6379/0
       STORAGE_BACKEND: memory
-      EMAIL_BACKEND: console
+      EMAIL_BACKEND: file # end-to-end tests read invitation links from these files
+      EMAIL_FILE_DIR: /tmp/propflow-mail
+      E2E_MAIL_DIR: /tmp/propflow-mail
       BACKGROUND_TASKS: sync
       FRONTEND_ORIGIN: http://localhost:3000
       API_ORIGIN: http://127.0.0.1:5000

@@ -13,6 +13,15 @@ import { useLogin } from "@/features/auth/hooks";
 import { loginSchema, type LoginValues } from "@/features/auth/schemas";
 import { ApiError } from "@/lib/api/errors";
 
+type LoginFormProps = {
+  next?: string;
+  /** Locks the email field to this address. */
+  email?: string;
+  /** Runs after signing in, instead of redirecting. */
+  onSuccess?: () => Promise<void>;
+  showRegisterLink?: boolean;
+};
+
 function loginErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     // One message for both cases: never reveal whether the email or the password was wrong.
@@ -25,7 +34,12 @@ function loginErrorMessage(error: unknown): string {
   return "Something went wrong. Please try again.";
 }
 
-export function LoginForm({ next }: { next: string }) {
+export function LoginForm({
+  next = "/dashboard",
+  email,
+  onSuccess,
+  showRegisterLink = true,
+}: LoginFormProps) {
   const router = useRouter();
   const login = useLogin();
   const [formError, setFormError] = useState<string | null>(null);
@@ -35,17 +49,19 @@ export function LoginForm({ next }: { next: string }) {
     formState: { errors, isSubmitting },
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: email ?? "", password: "" },
   });
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
     try {
       await login.mutateAsync(values);
-      router.replace(next);
     } catch (error) {
       setFormError(loginErrorMessage(error));
+      return;
     }
+    if (onSuccess) await onSuccess();
+    else router.replace(next);
   });
 
   return (
@@ -56,6 +72,7 @@ export function LoginForm({ next }: { next: string }) {
         label="Email"
         type="email"
         autoComplete="email"
+        readOnly={email !== undefined}
         error={errors.email?.message}
         {...register("email")}
       />
@@ -70,12 +87,17 @@ export function LoginForm({ next }: { next: string }) {
       <Button type="submit" pending={isSubmitting} className="w-full">
         {isSubmitting ? "Signing in…" : "Sign in"}
       </Button>
-      <p className="text-center text-sm text-slate-600">
-        New to PropFlow?{" "}
-        <Link href="/register" className="font-semibold text-indigo-600 hover:text-indigo-500">
-          Create an account
-        </Link>
-      </p>
+      {showRegisterLink ? (
+        <p className="text-center text-sm text-slate-600">
+          New to PropFlow?{" "}
+          <Link
+            href="/register"
+            className="font-semibold text-indigo-600 hover:text-indigo-500"
+          >
+            Create an account
+          </Link>
+        </p>
+      ) : null}
     </form>
   );
 }

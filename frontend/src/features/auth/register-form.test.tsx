@@ -26,10 +26,17 @@ describe("RegisterForm", () => {
     await userEvent.type(screen.getByLabelText("Full name"), "Erin Example");
     await userEvent.type(screen.getByLabelText("Email"), "erin@example.com");
     await userEvent.type(screen.getByLabelText("Password"), "short");
-    await userEvent.click(screen.getByRole("button", { name: "Create account" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Create account" }),
+    );
 
-    expect(await screen.findByText("Use at least 12 characters.")).toBeVisible();
-    expect(screen.getByLabelText("Password")).toHaveAttribute("aria-invalid", "true");
+    expect(
+      await screen.findByText("Use at least 12 characters."),
+    ).toBeVisible();
+    expect(screen.getByLabelText("Password")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

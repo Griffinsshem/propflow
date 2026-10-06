@@ -10,6 +10,7 @@ const EVERYONE: readonly Role[] = ["owner", "manager", "tenant", "contractor"];
  */
 export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/dashboard", label: "Dashboard", roles: EVERYONE },
+  { href: "/settings/team", label: "Team", roles: ["owner", "manager"] },
   { href: "/settings/organization", label: "Organization", roles: ["owner", "manager"] },
 ];
 

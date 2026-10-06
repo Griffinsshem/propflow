@@ -6,8 +6,8 @@ const labels = (role: Parameters<typeof navFor>[0]) => navFor(role).map((item) =
 
 describe("navFor", () => {
   it("shows organization settings to owners and managers", () => {
-    expect(labels("owner")).toEqual(["Dashboard", "Organization"]);
-    expect(labels("manager")).toEqual(["Dashboard", "Organization"]);
+    expect(labels("owner")).toEqual(["Dashboard", "Team", "Organization"]);
+    expect(labels("manager")).toEqual(["Dashboard", "Team", "Organization"]);
   });
 
   it("keeps tenants and contractors to their own sections", () => {
