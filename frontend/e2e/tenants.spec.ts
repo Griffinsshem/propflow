@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
 import {
   acceptAsNewUser,
@@ -47,6 +47,7 @@ test("an invited tenant lands in their unit and the owner sees it occupied", asy
   );
   await expect(tenant.getByRole("navigation", { name: "Main" }).getByRole("link")).toHaveText([
     "Dashboard",
+    "Maintenance",
   ]);
   await context.close();
 

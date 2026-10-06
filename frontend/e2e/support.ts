@@ -2,16 +2,13 @@ import { randomUUID } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { expect, type Page } from "@playwright/test";
+import { expect, type Browser, type Page } from "@playwright/test";
 
 export const PASSWORD = "correct horse battery staple";
 
 export const uniqueEmail = () => `e2e-${randomUUID()}@example.com`;
 
-export async function registerNewUser(
-  page: Page,
-  fullName: string,
-): Promise<string> {
+export async function registerNewUser(page: Page, fullName: string): Promise<string> {
   const email = uniqueEmail();
   await page.goto("/register");
   await page.getByLabel("Full name").fill(fullName);
@@ -30,10 +27,7 @@ export async function signIn(page: Page, email: string): Promise<void> {
   await expect(page).toHaveURL(/\/dashboard$/);
 }
 
-export async function createOrganization(
-  page: Page,
-  name: string,
-): Promise<void> {
+export async function createOrganization(page: Page, name: string): Promise<void> {
   await page.getByLabel("Organization name").fill(name);
   await page.getByRole("button", { name: "Create organization" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
@@ -41,21 +35,14 @@ export async function createOrganization(
 }
 
 /** Registers a new owner with a fresh organization; returns the owner's email. */
-export async function ownerWithOrganization(
-  page: Page,
-  organization: string,
-): Promise<string> {
+export async function ownerWithOrganization(page: Page, organization: string): Promise<string> {
   const email = await registerNewUser(page, "Olivia Owner");
   await page.goto("/organizations/new");
   await createOrganization(page, organization);
   return email;
 }
 
-export async function inviteFromTeamPage(
-  page: Page,
-  email: string,
-  role: string,
-): Promise<void> {
+export async function inviteFromTeamPage(page: Page, email: string, role: string): Promise<void> {
   await page.goto("/settings/team");
   await page.getByLabel("Email address").fill(email);
   await page.getByLabel("Role", { exact: true }).selectOption(role);
@@ -63,11 +50,7 @@ export async function inviteFromTeamPage(
   await expect(page.getByText(`Invitation sent to ${email}.`)).toBeVisible();
 }
 
-export async function acceptAsNewUser(
-  page: Page,
-  link: string,
-  fullName: string,
-): Promise<void> {
+export async function acceptAsNewUser(page: Page, link: string, fullName: string): Promise<void> {
   await page.goto(link);
   await page.getByLabel("Full name").fill(fullName);
   await page.getByLabel("Password").fill(PASSWORD);
@@ -75,10 +58,7 @@ export async function acceptAsNewUser(
   await expect(page).toHaveURL(/\/dashboard$/);
 }
 
-export async function createProperty(
-  page: Page,
-  name: string,
-): Promise<string> {
+export async function createProperty(page: Page, name: string): Promise<string> {
   await page.goto("/properties/new");
   await page.getByLabel("Property name").fill(name);
   await page.getByLabel("Address", { exact: true }).fill("1 River Road");
@@ -94,8 +74,7 @@ export async function createProperty(
  */
 export async function linkSentTo(email: string, path: string): Promise<string> {
   const directory = process.env.E2E_MAIL_DIR;
-  if (!directory)
-    throw new Error("Set E2E_MAIL_DIR to the API's EMAIL_FILE_DIR");
+  if (!directory) throw new Error("Set E2E_MAIL_DIR to the API's EMAIL_FILE_DIR");
   const pattern = new RegExp(`https?://\\S+${path}#token=[A-Za-z0-9_.-]+`);
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const files = (await readdir(directory).catch(() => [] as string[]))
@@ -103,17 +82,47 @@ export async function linkSentTo(email: string, path: string): Promise<string> {
       .sort()
       .reverse();
     for (const name of files) {
-      const message = JSON.parse(
-        await readFile(join(directory, name), "utf8"),
-      ) as {
+      const message = JSON.parse(await readFile(join(directory, name), "utf8")) as {
         to: string;
         body: string;
       };
-      const link =
-        message.to === email ? pattern.exec(message.body)?.[0] : undefined;
+      const link = message.to === email ? pattern.exec(message.body)?.[0] : undefined;
       if (link) return link;
     }
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
   throw new Error(`No email to ${email} containing ${path}`);
+}
+
+export async function propertyWithUnits(
+  page: Page,
+  name: string,
+  labels: string[],
+): Promise<string> {
+  const url = await createProperty(page, name);
+  for (const label of labels) {
+    await page.getByLabel("Unit label").fill(label);
+    await page.getByRole("button", { name: "Add unit" }).click();
+    await expect(page.getByText(`Unit ${label} added.`)).toBeVisible();
+  }
+  return url;
+}
+
+/** From a property page: invites a new tenant into `unitLabel`; returns the tenant's signed-in page. */
+export async function placeNewTenant(
+  page: Page,
+  browser: Browser,
+  unitLabel: string,
+  fullName: string,
+): Promise<Page> {
+  await page.getByRole("link", { name: unitLabel, exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: `Unit ${unitLabel}` })).toBeVisible();
+  const email = uniqueEmail();
+  await page.getByLabel("Tenant email").fill(email);
+  await page.getByRole("button", { name: "Invite tenant" }).click();
+  await expect(page.getByText(`Invitation sent to ${email}.`)).toBeVisible();
+  const context = await browser.newContext();
+  const tenant = await context.newPage();
+  await acceptAsNewUser(tenant, await linkSentTo(email, "/accept-invite"), fullName);
+  return tenant;
 }

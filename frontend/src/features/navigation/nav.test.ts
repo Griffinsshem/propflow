@@ -3,21 +3,19 @@ import { describe, expect, it } from "vitest";
 import { navFor } from "./nav";
 
 const labels = (role: Parameters<typeof navFor>[0]) => navFor(role).map((item) => item.label);
+const WORKSPACE = ["Dashboard", "Maintenance", "Properties", "Tenants", "Team", "Organization"];
 
 describe("navFor", () => {
-  it("shows organization settings to owners and managers", () => {
-    expect(labels("owner")).toEqual(["Dashboard", "Properties", "Tenants", "Team", "Organization"]);
-    expect(labels("manager")).toEqual([
-      "Dashboard",
-      "Properties",
-      "Tenants",
-      "Team",
-      "Organization",
-    ]);
+  it("gives owners and managers the full workspace", () => {
+    expect(labels("owner")).toEqual(WORKSPACE);
+    expect(labels("manager")).toEqual(WORKSPACE);
   });
 
-  it("keeps tenants and contractors to their own sections", () => {
-    expect(labels("tenant")).toEqual(["Dashboard"]);
+  it("gives tenants their dashboard and their requests", () => {
+    expect(labels("tenant")).toEqual(["Dashboard", "Maintenance"]);
+  });
+
+  it("keeps contractors to their dashboard", () => {
     expect(labels("contractor")).toEqual(["Dashboard"]);
   });
 

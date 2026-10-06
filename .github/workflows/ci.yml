@@ -132,6 +132,7 @@ jobs:
       EMAIL_BACKEND: file # end-to-end tests read invitation links from these files
       EMAIL_FILE_DIR: /tmp/propflow-mail
       E2E_MAIL_DIR: /tmp/propflow-mail
+      TRUSTED_PROXY_COUNT: "1" # each test is its own visitor (frontend/e2e/fixtures.ts)
       BACKGROUND_TASKS: sync
       FRONTEND_ORIGIN: http://localhost:3000
       API_ORIGIN: http://127.0.0.1:5000

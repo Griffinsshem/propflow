@@ -1,25 +1,14 @@
 import { randomUUID } from "node:crypto";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
-import {
-  createOrganization,
-  linkSentTo,
-  PASSWORD,
-  registerNewUser,
-} from "./support";
+import { createOrganization, linkSentTo, PASSWORD, registerNewUser } from "./support";
 
-async function ownerOnTeamPage(
-  page: Page,
-  organization: string,
-): Promise<void> {
+async function ownerOnTeamPage(page: Page, organization: string): Promise<void> {
   await registerNewUser(page, "Olivia Owner");
   await page.goto("/organizations/new");
   await createOrganization(page, organization);
-  await page
-    .getByRole("navigation", { name: "Main" })
-    .getByRole("link", { name: "Team" })
-    .click();
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Team" }).click();
 }
 
 async function invite(page: Page, email: string, role: string): Promise<void> {
@@ -29,10 +18,7 @@ async function invite(page: Page, email: string, role: string): Promise<void> {
   await expect(page.getByText(`Invitation sent to ${email}.`)).toBeVisible();
 }
 
-test("an owner invites a manager who joins by creating an account", async ({
-  page,
-  browser,
-}) => {
+test("an owner invites a manager who joins by creating an account", async ({ page, browser }) => {
   await ownerOnTeamPage(page, "Riverside Estates");
   const managerEmail = `e2e-${randomUUID()}@example.com`;
   await invite(page, managerEmail, "manager");
@@ -44,9 +30,7 @@ test("an owner invites a manager who joins by creating an account", async ({
   const context = await browser.newContext();
   const manager = await context.newPage();
   await manager.goto(link);
-  await expect(
-    manager.getByRole("heading", { name: "Join Riverside Estates" }),
-  ).toBeVisible();
+  await expect(manager.getByRole("heading", { name: "Join Riverside Estates" })).toBeVisible();
   await expect(manager.getByLabel("Email")).toHaveValue(managerEmail);
   await manager.getByLabel("Full name").fill("Mary Manager");
   await manager.getByLabel("Password").fill(PASSWORD);
@@ -56,20 +40,16 @@ test("an owner invites a manager who joins by creating an account", async ({
   await context.close();
 
   await page.reload();
-  await expect(
-    page.getByRole("combobox", { name: "Role for Mary Manager" }),
-  ).toHaveValue("manager");
+  await expect(page.getByRole("combobox", { name: "Role for Mary Manager" })).toHaveValue(
+    "manager",
+  );
   await expect(page.getByText("No pending invitations.")).toBeVisible();
 });
 
-test("the last owner can be neither demoted nor deactivated", async ({
-  page,
-}) => {
+test("the last owner can be neither demoted nor deactivated", async ({ page }) => {
   await ownerOnTeamPage(page, "Solo Estates");
   const role = page.getByRole("combobox", { name: "Role for Olivia Owner" });
-  const lastOwner = page
-    .getByRole("alert")
-    .filter({ hasText: "at least one active owner" });
+  const lastOwner = page.getByRole("alert").filter({ hasText: "at least one active owner" });
 
   await role.selectOption("manager");
   await expect(lastOwner).toBeVisible();
@@ -93,18 +73,12 @@ test("an invitation works only for its address and stops working once revoked", 
   const someoneElse = await context.newPage();
   await registerNewUser(someoneElse, "Oscar Other");
   await someoneElse.goto(link);
-  await expect(
-    someoneElse.getByText(`This invitation is for ${invitee}.`),
-  ).toBeVisible();
+  await expect(someoneElse.getByText(`This invitation is for ${invitee}.`)).toBeVisible();
 
-  await page
-    .getByRole("button", { name: `Revoke invitation for ${invitee}` })
-    .click();
+  await page.getByRole("button", { name: `Revoke invitation for ${invitee}` }).click();
   await expect(page.getByText("No pending invitations.")).toBeVisible();
 
   await someoneElse.reload();
-  await expect(
-    someoneElse.getByRole("heading", { name: "Invitation unavailable" }),
-  ).toBeVisible();
+  await expect(someoneElse.getByRole("heading", { name: "Invitation unavailable" })).toBeVisible();
   await context.close();
 });

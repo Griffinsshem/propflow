@@ -1,13 +1,10 @@
 import { randomUUID } from "node:crypto";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
 const PASSWORD = "correct horse battery staple";
 
-async function registerNewUser(
-  page: Page,
-  fullName = "Erin Example",
-): Promise<string> {
+async function registerNewUser(page: Page, fullName = "Erin Example"): Promise<string> {
   const email = `e2e-${randomUUID()}@example.com`;
   await page.goto("/register");
   await page.getByLabel("Full name").fill(fullName);
@@ -26,9 +23,7 @@ async function signIn(page: Page, email: string): Promise<void> {
 
 test("a new user can register, sign out and sign back in", async ({ page }) => {
   const email = await registerNewUser(page);
-  await expect(
-    page.getByRole("heading", { name: "Welcome, Erin" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Welcome, Erin" })).toBeVisible();
 
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/login/);
@@ -37,9 +32,7 @@ test("a new user can register, sign out and sign back in", async ({ page }) => {
   await expect(page).toHaveURL(/\/dashboard$/);
 });
 
-test("signed-out visitors are sent to sign in, then returned", async ({
-  page,
-}) => {
+test("signed-out visitors are sent to sign in, then returned", async ({ page }) => {
   const email = await registerNewUser(page);
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/login/);
@@ -57,9 +50,7 @@ test("a wrong password gets one generic message", async ({ page }) => {
   await page.getByRole("button", { name: "Sign in" }).click();
   // Filtered by text: Next's route announcer is also role="alert" (empty, for screen readers).
   await expect(
-    page
-      .getByRole("alert")
-      .filter({ hasText: "Email or password is incorrect." }),
+    page.getByRole("alert").filter({ hasText: "Email or password is incorrect." }),
   ).toBeVisible();
 });
 
@@ -72,9 +63,7 @@ test("pages carry a nonce-based CSP and the API answers through the proxy", asyn
   expect(headers["content-security-policy"]).toMatch(
     /script-src 'self' 'nonce-[^']+' 'strict-dynamic'/,
   );
-  expect(headers["content-security-policy"]).toContain(
-    "frame-ancestors 'none'",
-  );
+  expect(headers["content-security-policy"]).toContain("frame-ancestors 'none'");
   expect(headers["x-frame-options"]).toBe("DENY");
   expect(headers["x-powered-by"]).toBeUndefined();
 
