@@ -3,7 +3,15 @@ import { describe, expect, it } from "vitest";
 import { navFor } from "./nav";
 
 const labels = (role: Parameters<typeof navFor>[0]) => navFor(role).map((item) => item.label);
-const WORKSPACE = ["Dashboard", "Maintenance", "Properties", "Tenants", "Team", "Organization"];
+const WORKSPACE = [
+  "Dashboard",
+  "Maintenance",
+  "Properties",
+  "Tenants",
+  "Contractors",
+  "Team",
+  "Organization",
+];
 
 describe("navFor", () => {
   it("gives owners and managers the full workspace", () => {

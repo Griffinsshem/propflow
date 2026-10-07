@@ -17,6 +17,7 @@ test("an owner creates organizations, switches between them and renames one", as
     "Maintenance",
     "Properties",
     "Tenants",
+    "Contractors",
     "Team",
     "Organization",
   ]);

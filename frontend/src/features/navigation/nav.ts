@@ -13,6 +13,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/maintenance", label: "Maintenance", roles: ["owner", "manager", "tenant"] },
   { href: "/properties", label: "Properties", roles: ["owner", "manager"] },
   { href: "/tenants", label: "Tenants", roles: ["owner", "manager"] },
+  { href: "/contractors", label: "Contractors", roles: ["owner", "manager"] },
   { href: "/settings/team", label: "Team", roles: ["owner", "manager"] },
   {
     href: "/settings/organization",
