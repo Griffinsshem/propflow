@@ -19,6 +19,13 @@ updates:
       # Type definitions must match the Node 22 runtime, or code compiles that then crashes.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+      # Toolchain majors move together with Next.js, deliberately, not automatically.
+      # TypeScript 7 and ESLint 10 failed our Frontend job (PRs #6 and #5); revisit when
+      # Next.js and eslint-config-next support them.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
     groups:
       frontend-minor-and-patch:
         update-types: [minor, patch]
