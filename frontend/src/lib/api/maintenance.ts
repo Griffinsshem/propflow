@@ -80,3 +80,26 @@ export const maintenanceApi = {
   create: (body: MaintenanceInput) =>
     apiRequest<MaintenanceRequest>("/maintenance", { method: "POST", body }),
 };
+
+export type PersonRef = { membership_id: string; full_name: string };
+
+export type HistoryEntry = {
+  from_status: MaintenanceStatus | null;
+  to_status: MaintenanceStatus;
+  reason: string | null;
+  changed_by: PersonRef;
+  created_at: string;
+};
+
+export type Comment = { id: string; body: string; author: PersonRef; created_at: string };
+
+const requestPath = (id: string) => `/maintenance/${encodeURIComponent(id)}`;
+
+export const activityApi = {
+  history: (requestId: string, signal?: AbortSignal) =>
+    apiRequest<HistoryEntry[]>(`${requestPath(requestId)}/history`, { signal }),
+  comments: (requestId: string, signal?: AbortSignal) =>
+    apiRequest<Page<Comment>>(`${requestPath(requestId)}/comments?limit=100`, { signal }),
+  addComment: ({ requestId, body }: { requestId: string; body: string }) =>
+    apiRequest<Comment>(`${requestPath(requestId)}/comments`, { method: "POST", body: { body } }),
+};

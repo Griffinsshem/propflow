@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { FormAlert } from "@/components/ui/form-alert";
+import { ActivityFeed } from "@/features/maintenance/activity-feed";
+import { CommentForm } from "@/features/maintenance/comment-form";
 import { useMaintenanceRequest } from "@/features/maintenance/hooks";
 import { PhotoGallery } from "@/features/maintenance/photo-gallery";
 import { PhotoUploader } from "@/features/maintenance/photo-uploader";
@@ -90,6 +92,16 @@ export default function MaintenanceRequestPage() {
         {data.status !== "closed" ? (
           <PhotoUploader orgId={membership.organization_id} requestId={data.id} />
         ) : null}
+      </section>
+      <section
+        aria-labelledby="activity-heading"
+        className="space-y-4 rounded-lg bg-white p-6 ring-1 ring-slate-200"
+      >
+        <h2 id="activity-heading" className="font-semibold">
+          Activity
+        </h2>
+        <ActivityFeed orgId={membership.organization_id} requestId={data.id} />
+        <CommentForm orgId={membership.organization_id} requestId={data.id} />
       </section>
     </div>
   );
