@@ -6,6 +6,7 @@ const labels = (role: Parameters<typeof navFor>[0]) => navFor(role).map((item) =
 const WORKSPACE = [
   "Dashboard",
   "Maintenance",
+  "Work orders",
   "Properties",
   "Tenants",
   "Contractors",
@@ -23,8 +24,8 @@ describe("navFor", () => {
     expect(labels("tenant")).toEqual(["Dashboard", "Maintenance"]);
   });
 
-  it("keeps contractors to their dashboard", () => {
-    expect(labels("contractor")).toEqual(["Dashboard"]);
+  it("gives contractors their dashboard and their jobs", () => {
+    expect(labels("contractor")).toEqual(["Dashboard", "Work orders"]);
   });
 
   it("shows only the dashboard without an active organization", () => {

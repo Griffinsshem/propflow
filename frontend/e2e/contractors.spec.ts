@@ -44,6 +44,7 @@ test("an owner adds a contractor and invites them to sign in", async ({ page, br
   await expect(contractor.getByText("You're signed in as contractor.")).toBeVisible();
   await expect(contractor.getByRole("navigation", { name: "Main" }).getByRole("link")).toHaveText([
     "Dashboard",
+    "Work orders",
   ]);
   await context.close();
 

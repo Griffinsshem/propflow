@@ -15,6 +15,7 @@ test("an owner creates organizations, switches between them and renames one", as
   await expect(nav.getByRole("link")).toHaveText([
     "Dashboard",
     "Maintenance",
+    "Work orders",
     "Properties",
     "Tenants",
     "Contractors",

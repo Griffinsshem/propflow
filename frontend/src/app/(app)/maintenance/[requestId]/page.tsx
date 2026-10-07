@@ -7,6 +7,8 @@ import { FormAlert } from "@/components/ui/form-alert";
 import { ActivityFeed } from "@/features/maintenance/activity-feed";
 import { CommentForm } from "@/features/maintenance/comment-form";
 import { useMaintenanceRequest } from "@/features/maintenance/hooks";
+import { isStaff } from "@/features/maintenance/permissions";
+import { RequestWorkOrders } from "@/features/work-orders/request-work-orders";
 import { StatusActions } from "@/features/maintenance/status-actions";
 import { PhotoGallery } from "@/features/maintenance/photo-gallery";
 import { PhotoUploader } from "@/features/maintenance/photo-uploader";
@@ -83,6 +85,17 @@ export default function MaintenanceRequestPage() {
           </div>
         ) : null}
       </section>
+      {isStaff(membership.role) ? (
+        <section
+          aria-labelledby="work-orders-heading"
+          className="space-y-4 rounded-lg bg-white p-6 ring-1 ring-slate-200"
+        >
+          <h2 id="work-orders-heading" className="font-semibold">
+            Work orders
+          </h2>
+          <RequestWorkOrders orgId={membership.organization_id} request={data} />
+        </section>
+      ) : null}
       <section
         aria-labelledby="photos-heading"
         className="space-y-4 rounded-lg bg-white p-6 ring-1 ring-slate-200"

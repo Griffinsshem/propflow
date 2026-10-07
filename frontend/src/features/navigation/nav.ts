@@ -11,6 +11,7 @@ const EVERYONE: readonly Role[] = ["owner", "manager", "tenant", "contractor"];
 export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/dashboard", label: "Dashboard", roles: EVERYONE },
   { href: "/maintenance", label: "Maintenance", roles: ["owner", "manager", "tenant"] },
+  { href: "/work-orders", label: "Work orders", roles: ["owner", "manager", "contractor"] },
   { href: "/properties", label: "Properties", roles: ["owner", "manager"] },
   { href: "/tenants", label: "Tenants", roles: ["owner", "manager"] },
   { href: "/contractors", label: "Contractors", roles: ["owner", "manager"] },
