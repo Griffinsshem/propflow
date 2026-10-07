@@ -7,6 +7,7 @@ import { FormAlert } from "@/components/ui/form-alert";
 import { ActivityFeed } from "@/features/maintenance/activity-feed";
 import { CommentForm } from "@/features/maintenance/comment-form";
 import { useMaintenanceRequest } from "@/features/maintenance/hooks";
+import { StatusActions } from "@/features/maintenance/status-actions";
 import { PhotoGallery } from "@/features/maintenance/photo-gallery";
 import { PhotoUploader } from "@/features/maintenance/photo-uploader";
 import { CATEGORY_LABELS, locationOf, PRIORITY_LABELS } from "@/features/maintenance/labels";
@@ -60,6 +61,7 @@ export default function MaintenanceRequestPage() {
           <StatusBadge status={data.status} />
         </div>
       </div>
+      <StatusActions orgId={membership.organization_id} request={data} />
       <section className="space-y-5 rounded-lg bg-white p-6 ring-1 ring-slate-200">
         <dl className="grid gap-3 text-sm sm:grid-cols-2">
           {details.map(([term, value]) => (

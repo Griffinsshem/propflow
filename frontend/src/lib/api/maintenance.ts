@@ -103,3 +103,10 @@ export const activityApi = {
   addComment: ({ requestId, body }: { requestId: string; body: string }) =>
     apiRequest<Comment>(`${requestPath(requestId)}/comments`, { method: "POST", body: { body } }),
 };
+
+export type StatusChange = { status: MaintenanceStatus; reason: string | null; version: number };
+
+export const statusApi = {
+  change: (requestId: string, body: StatusChange) =>
+    apiRequest<MaintenanceRequest>(`${requestPath(requestId)}/status`, { method: "POST", body }),
+};

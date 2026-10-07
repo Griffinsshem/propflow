@@ -126,3 +126,28 @@ export async function placeNewTenant(
   await acceptAsNewUser(tenant, await linkSentTo(email, "/accept-invite"), fullName);
   return tenant;
 }
+
+export async function reportAsTenant(page: Page, title: string): Promise<void> {
+  await page.goto("/maintenance/new");
+  await expect(page.getByRole("heading", { level: 1, name: "Report an issue" })).toBeVisible();
+  await page.getByLabel("Title").fill(title);
+  await page.getByLabel("What's wrong?").fill("Reported by an end-to-end test.");
+  await page.getByRole("button", { name: "Submit report" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+}
+
+export async function reportAsStaff(
+  page: Page,
+  property: string,
+  title: string,
+  priority = "normal",
+): Promise<void> {
+  await page.goto("/maintenance/new");
+  await expect(page.getByRole("heading", { level: 1, name: "Report an issue" })).toBeVisible();
+  await page.getByLabel("Property", { exact: true }).selectOption({ label: property });
+  await page.getByLabel("Title").fill(title);
+  await page.getByLabel("Priority").selectOption(priority);
+  await page.getByLabel("What's wrong?").fill("Reported by an end-to-end test.");
+  await page.getByRole("button", { name: "Submit report" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+}
