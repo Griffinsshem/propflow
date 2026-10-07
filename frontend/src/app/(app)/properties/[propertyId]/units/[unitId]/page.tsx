@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useState } from "react";
 
 import { FormAlert } from "@/components/ui/form-alert";
 import { useActiveMembership } from "@/features/organizations/use-active-membership";
@@ -20,6 +21,8 @@ export default function UnitPage() {
   const orgId = membership?.organization_id ?? null;
   const unit = useUnit(orgId, unitId);
   const buildings = useBuildings(orgId ?? "none", propertyId);
+  // Shown while the unit is still at the version this user saved.
+  const [savedVersion, setSavedVersion] = useState<number | null>(null);
 
   const backLink = (
     <Link
@@ -61,10 +64,14 @@ export default function UnitPage() {
       <div className="rounded-lg bg-white p-6 ring-1 ring-slate-200">
         <UnitEditForm
           key={`${unit.data.id}:${unit.data.version}`}
+          onSaved={setSavedVersion}
           orgId={orgId}
           unit={unit.data}
           buildings={buildings.data}
         />
+        <p role="status" className="mt-3 text-sm text-green-700">
+          {savedVersion === unit.data.version ? "Saved." : ""}
+        </p>
       </div>
       <section
         aria-labelledby="tenant-heading"

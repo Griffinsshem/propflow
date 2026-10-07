@@ -69,7 +69,7 @@ export default function ContractorPage() {
         </p>
       </div>
       <Section id="details-heading" title="Details">
-        <ContractorDetailsForm key={`${data.id}:${data.version}`} orgId={orgId} contractor={data} />
+        <ContractorDetailsForm key={data.id} orgId={orgId} contractor={data} />
       </Section>
       <Section id="login-heading" title="Login">
         <ContractorLoginSection key={data.id} orgId={orgId} contractor={data} />

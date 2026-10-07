@@ -19,18 +19,8 @@ import {
 } from "@/features/properties/schemas";
 import { UnitFields } from "@/features/properties/unit-fields";
 import { messageOf } from "@/lib/api/errors";
-import {
-  unitsApi,
-  type Building,
-  type Unit,
-  type UnitStatus,
-} from "@/lib/api/properties";
-import {
-  changedFields,
-  detectStaleConflict,
-  diffValues,
-  mergeKeepingMine,
-} from "@/lib/conflict";
+import { unitsApi, type Building, type Unit, type UnitStatus } from "@/lib/api/properties";
+import { changedFields, detectStaleConflict, diffValues, mergeKeepingMine } from "@/lib/conflict";
 import { applyFieldErrors } from "@/lib/forms";
 
 const LABELS = {
@@ -41,9 +31,14 @@ const LABELS = {
   status: "Status",
 };
 
-type UnitEditFormProps = { orgId: string; unit: Unit; buildings: Building[] };
+type UnitEditFormProps = {
+  orgId: string;
+  unit: Unit;
+  buildings: Building[];
+  onSaved?: (version: number) => void;
+};
 
-export function UnitEditForm({ orgId, unit, buildings }: UnitEditFormProps) {
+export function UnitEditForm({ orgId, unit, buildings, onSaved }: UnitEditFormProps) {
   const queryClient = useQueryClient();
   const update = useUpdateUnit(orgId, unit.property_id);
   const [base, setBase] = useState(unit);
@@ -62,13 +57,10 @@ export function UnitEditForm({ orgId, unit, buildings }: UnitEditFormProps) {
     defaultValues: unitFormValues(unit),
   });
 
-  const buildingName = new Map(
-    buildings.map((building) => [building.id, building.name]),
-  );
+  const buildingName = new Map(buildings.map((building) => [building.id, building.name]));
   const describe = (field: string, value: unknown) => {
     if (value === null || value === "") return "(none)";
-    if (field === "building_id")
-      return buildingName.get(String(value)) ?? "(unknown building)";
+    if (field === "building_id") return buildingName.get(String(value)) ?? "(unknown building)";
     if (field === "status") return UNIT_STATUS_LABELS[value as UnitStatus];
     return String(value);
   };
@@ -96,19 +88,16 @@ export function UnitEditForm({ orgId, unit, buildings }: UnitEditFormProps) {
       });
       setBase(updated);
       reset(unitFormValues(updated));
-      setNotice("Saved.");
+      // The page restarts this form on a new version, so the page shows the confirmation.
+      if (onSaved) onSaved(updated.version);
+      else setNotice("Saved.");
     } catch (error) {
-      const latest = await detectStaleConflict(
-        error,
-        base.version,
-        fetchLatest,
-      ).catch(() => null);
+      const latest = await detectStaleConflict(error, base.version, fetchLatest).catch(() => null);
       if (latest) {
         setConflict(latest);
         return;
       }
-      if (!applyFieldErrors(error, setError, UNIT_FIELDS))
-        setFormError(messageOf(error));
+      if (!applyFieldErrors(error, setError, UNIT_FIELDS)) setFormError(messageOf(error));
     }
   });
 
@@ -121,13 +110,7 @@ export function UnitEditForm({ orgId, unit, buildings }: UnitEditFormProps) {
 
   function keepMine() {
     if (!conflict) return;
-    reset(
-      mergeKeepingMine(
-        getValues(),
-        unitFormValues(base),
-        unitFormValues(conflict),
-      ),
-    );
+    reset(mergeKeepingMine(getValues(), unitFormValues(base), unitFormValues(conflict)));
     setBase(conflict);
     setConflict(null);
   }
@@ -137,12 +120,7 @@ export function UnitEditForm({ orgId, unit, buildings }: UnitEditFormProps) {
       {conflict ? (
         <ConflictNotice
           what="unit"
-          changes={changedFields(
-            unitFormValues(base),
-            unitFormValues(conflict),
-            LABELS,
-            describe,
-          )}
+          changes={changedFields(unitFormValues(base), unitFormValues(conflict), LABELS, describe)}
           onUseTheirs={takeTheirs}
           onKeepMine={keepMine}
         />
@@ -150,11 +128,7 @@ export function UnitEditForm({ orgId, unit, buildings }: UnitEditFormProps) {
       {formError ? <FormAlert>{formError}</FormAlert> : null}
       <UnitFields register={register} errors={errors} buildings={buildings} />
       <div className="flex items-center gap-3">
-        <Button
-          type="submit"
-          pending={isSubmitting}
-          disabled={conflict !== null}
-        >
+        <Button type="submit" pending={isSubmitting} disabled={conflict !== null}>
           {isSubmitting ? "Saving…" : "Save unit"}
         </Button>
         <p role="status" className="text-sm text-green-700">
