@@ -40,7 +40,7 @@ mdurl==0.1.2
     # via markdown-it-py
 msgpack==1.2.3
     # via cachecontrol
-mypy==2.3.1
+mypy==2.4.0
     # via -r requirements-dev.in
 mypy-extensions==1.1.0
     # via mypy
@@ -90,7 +90,7 @@ rich==15.0.0
     # via
     #   bandit
     #   pip-audit
-ruff==0.16.9
+ruff==0.16.10
     # via -r requirements-dev.in
 sortedcontainers==2.4.0
     # via cyclonedx-python-lib
