@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { useLogout } from "@/features/auth/hooks";
 import { navFor } from "@/features/navigation/nav";
+import { NotificationBell } from "@/features/notifications/notification-bell";
 import { activeMembership } from "@/features/organizations/membership";
 import { OrganizationSwitcher } from "@/features/organizations/organization-switcher";
 import type { CurrentUser } from "@/lib/api/auth";
@@ -14,7 +15,8 @@ import type { CurrentUser } from "@/lib/api/auth";
 export function AppShell({ user, children }: { user: CurrentUser; children: ReactNode }) {
   const pathname = usePathname();
   const logout = useLogout();
-  const items = navFor(activeMembership(user)?.role ?? null);
+  const active = activeMembership(user);
+  const items = navFor(active?.role ?? null);
 
   return (
     <div className="min-h-screen">
@@ -25,6 +27,7 @@ export function AppShell({ user, children }: { user: CurrentUser; children: Reac
           </Link>
           <div className="flex flex-wrap items-center gap-4">
             <OrganizationSwitcher user={user} />
+            {active ? <NotificationBell orgId={active.organization_id} /> : null}
             <span className="hidden text-sm text-slate-600 md:inline">{user.full_name}</span>
             <Button
               type="button"

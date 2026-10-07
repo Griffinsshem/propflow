@@ -84,6 +84,9 @@ jobs:
         run: npm run lint
       - name: Unit tests
         run: npm run test
+      - name: Notification links cover every resource type
+        working-directory: ${{ github.workspace }}
+        run: python3 scripts/check_notification_links.py
       - name: Dependency vulnerability audit
         run: npm audit --audit-level=high --omit=dev
       - name: Type-check and build

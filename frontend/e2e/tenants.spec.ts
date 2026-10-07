@@ -78,6 +78,8 @@ test("a tenant can be moved to another unit and their tenancy ended", async ({ p
   await expect(page.getByLabel("Tenant email")).toBeVisible(); // A1 is vacant again
 
   // Saving the unit keeps the form (and its confirmation) on screen.
+  // Wait until the unit itself has refreshed after the move, not just its tenant section.
+  await expect(page.getByLabel("Unit status")).toHaveValue("vacant");
   await page.getByLabel("Floor").fill("3");
   await page.getByRole("button", { name: "Save unit" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Saved." })).toBeVisible();
