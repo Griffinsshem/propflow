@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCurrentUser } from "@/features/auth/hooks";
 import { activeMembership } from "@/features/organizations/membership";
 import { MyHome } from "@/features/tenants/my-home";
+import { MyJobs } from "@/features/work-orders/my-jobs";
 
 export default function DashboardPage() {
   const { data: user } = useCurrentUser();
@@ -37,6 +38,7 @@ export default function DashboardPage() {
             </p>
           </section>
           {active.role === "tenant" ? <MyHome orgId={active.organization_id} /> : null}
+          {active.role === "contractor" ? <MyJobs orgId={active.organization_id} /> : null}
         </>
       ) : (
         <p className="text-sm text-slate-600">

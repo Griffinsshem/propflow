@@ -151,3 +151,38 @@ export async function reportAsStaff(
   await page.getByRole("button", { name: "Submit report" }).click();
   await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
 }
+
+/** Adds a contractor and signs a new person in as them; returns that person's page. */
+export async function addContractorWithLogin(
+  page: Page,
+  browser: Browser,
+  name: string,
+  specialty: string,
+  fullName: string,
+): Promise<Page> {
+  await page.goto("/contractors/new");
+  await expect(page.getByRole("heading", { level: 1, name: "Add a contractor" })).toBeVisible();
+  await page.getByLabel("Business name").fill(name);
+  await page.getByLabel("Specialty").selectOption(specialty);
+  await page.getByRole("button", { name: "Create contractor" }).click();
+  await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
+  const email = uniqueEmail();
+  await page.getByLabel("Login email").fill(email);
+  await page.getByRole("button", { name: "Invite to sign in" }).click();
+  await expect(page.getByText(`Invitation sent to ${email}.`)).toBeVisible();
+  const context = await browser.newContext();
+  const contractor = await context.newPage();
+  await acceptAsNewUser(contractor, await linkSentTo(email, "/accept-invite"), fullName);
+  return contractor;
+}
+
+/** On a submitted request's page: triage it and assign it to `contractorOption`. */
+export async function triageAndAssign(page: Page, contractorOption: string): Promise<void> {
+  await page
+    .getByRole("group", { name: "Status actions" })
+    .getByRole("button", { name: "Triage" })
+    .click();
+  await page.getByLabel("Contractor", { exact: true }).selectOption({ label: contractorOption });
+  await page.getByRole("button", { name: "Assign contractor" }).click();
+  await expect(page.getByRole("list", { name: "Work orders" })).toContainText("Assigned");
+}

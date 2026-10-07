@@ -85,6 +85,7 @@ test("cancelling a work order returns the request to triage", async ({ page }) =
   await triageAndAssign(page, "Quick Electric (Electrical)");
 
   await page.getByRole("link", { name: "Quick Electric" }).click();
+  await expect(page).toHaveURL(/\/work-orders\/[0-9a-f-]{36}$/);
   await expect(page.getByRole("heading", { level: 1, name: "Dead socket" })).toBeVisible();
   const actions = page.getByRole("group", { name: "Work order actions" });
   await expect(actions.getByRole("button")).toHaveText([
