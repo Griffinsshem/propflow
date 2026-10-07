@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { Suspense } from "react";
 
 import { FormAlert } from "@/components/ui/form-alert";
 import { SelectField } from "@/components/ui/select-field";
@@ -14,19 +14,24 @@ import { locationLabel, WORK_ORDER_STATUS_LABELS } from "@/features/work-orders/
 import { messageOf } from "@/lib/api/errors";
 import { WORK_ORDER_STATUSES, type WorkOrderStatus } from "@/lib/api/work-orders";
 import { formatDay } from "@/lib/format";
+import { pick, useQueryFilters, uuidOrEmpty } from "@/lib/query-filters";
 
 const STATUS_FILTER = [
   { value: "", label: "All statuses" },
   ...WORK_ORDER_STATUSES.map((value) => ({ value, label: WORK_ORDER_STATUS_LABELS[value] })),
 ];
 
-export default function WorkOrdersPage() {
+function WorkOrderList() {
   const membership = useActiveMembership();
   const orgId = membership?.organization_id ?? null;
   const staff = membership ? isStaff(membership.role) : false;
-  const [status, setStatus] = useState("");
-  const [contractorId, setContractorId] = useState("");
-  const [overdue, setOverdue] = useState(false);
+  const [query, setQuery] = useQueryFilters((params) => ({
+    status: pick(params.get("status"), WORK_ORDER_STATUSES),
+    contractor: uuidOrEmpty(params.get("contractor")),
+    overdue: params.get("overdue") === "1" ? "1" : "",
+  }));
+  const { status, contractor: contractorId } = query;
+  const overdue = query.overdue === "1";
   const orders = useWorkOrders(orgId, {
     ...(status ? { status: status as WorkOrderStatus } : {}),
     ...(contractorId ? { contractorId } : {}),
@@ -59,7 +64,7 @@ export default function WorkOrdersPage() {
           label="Status"
           options={STATUS_FILTER}
           value={status}
-          onChange={(event) => setStatus(event.target.value)}
+          onChange={(event) => setQuery("status", event.target.value)}
         />
         {staff ? (
           <SelectField
@@ -67,14 +72,14 @@ export default function WorkOrdersPage() {
             label="Contractor"
             options={contractorFilter}
             value={contractorId}
-            onChange={(event) => setContractorId(event.target.value)}
+            onChange={(event) => setQuery("contractor", event.target.value)}
           />
         ) : null}
         <label className="flex items-center gap-2 pb-2 text-sm text-slate-700">
           <input
             type="checkbox"
             checked={overdue}
-            onChange={(event) => setOverdue(event.target.checked)}
+            onChange={(event) => setQuery("overdue", event.target.checked ? "1" : "")}
             className="h-4 w-4 rounded border-slate-300 text-indigo-600"
           />
           Only overdue
@@ -118,5 +123,14 @@ export default function WorkOrdersPage() {
         <p className="text-sm text-slate-500">Showing the 50 most recent work orders.</p>
       ) : null}
     </div>
+  );
+}
+
+// useSearchParams needs a Suspense boundary.
+export default function WorkOrdersPage() {
+  return (
+    <Suspense fallback={null}>
+      <WorkOrderList />
+    </Suspense>
   );
 }

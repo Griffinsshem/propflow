@@ -3,9 +3,44 @@
 import Link from "next/link";
 
 import { useCurrentUser } from "@/features/auth/hooks";
+import {
+  ContractorOverview,
+  OperationsOverview,
+  OrganizationOverview,
+  TenantOverview,
+} from "@/features/dashboard/overviews";
 import { activeMembership } from "@/features/organizations/membership";
 import { MyHome } from "@/features/tenants/my-home";
 import { MyJobs } from "@/features/work-orders/my-jobs";
+import type { Role } from "@/lib/api/auth";
+
+function RoleDashboard({ role, orgId }: { role: Role; orgId: string }) {
+  switch (role) {
+    case "owner":
+      return (
+        <>
+          <OrganizationOverview orgId={orgId} />
+          <OperationsOverview orgId={orgId} />
+        </>
+      );
+    case "manager":
+      return <OperationsOverview orgId={orgId} />;
+    case "tenant":
+      return (
+        <>
+          <MyHome orgId={orgId} />
+          <TenantOverview orgId={orgId} />
+        </>
+      );
+    case "contractor":
+      return (
+        <>
+          <ContractorOverview orgId={orgId} />
+          <MyJobs orgId={orgId} />
+        </>
+      );
+  }
+}
 
 export default function DashboardPage() {
   const { data: user } = useCurrentUser();
@@ -37,8 +72,7 @@ export default function DashboardPage() {
               You&apos;re signed in as <span className="capitalize">{active.role}</span>.
             </p>
           </section>
-          {active.role === "tenant" ? <MyHome orgId={active.organization_id} /> : null}
-          {active.role === "contractor" ? <MyJobs orgId={active.organization_id} /> : null}
+          <RoleDashboard role={active.role} orgId={active.organization_id} />
         </>
       ) : (
         <p className="text-sm text-slate-600">

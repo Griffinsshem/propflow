@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { Suspense } from "react";
 
 import { FormAlert } from "@/components/ui/form-alert";
 import { SelectField } from "@/components/ui/select-field";
@@ -18,12 +18,14 @@ import { useActiveMembership } from "@/features/organizations/use-active-members
 import { useProperties } from "@/features/properties/hooks";
 import { messageOf } from "@/lib/api/errors";
 import {
+  PRIORITIES,
   STATUSES,
   type MaintenanceFilters,
   type MaintenanceStatus,
   type Priority,
 } from "@/lib/api/maintenance";
 import { formatDate } from "@/lib/format";
+import { pick, useQueryFilters, uuidOrEmpty } from "@/lib/query-filters";
 
 const STATUS_FILTER = [
   { value: "", label: "All statuses" },
@@ -31,13 +33,16 @@ const STATUS_FILTER = [
 ];
 const PRIORITY_FILTER = [{ value: "", label: "All priorities" }, ...PRIORITY_OPTIONS];
 
-export default function MaintenancePage() {
+function MaintenanceList() {
   const membership = useActiveMembership();
   const orgId = membership?.organization_id ?? null;
   const staff = membership ? isStaff(membership.role) : false;
-  const [status, setStatus] = useState("");
-  const [priority, setPriority] = useState("");
-  const [propertyId, setPropertyId] = useState("");
+  const [query, setQuery] = useQueryFilters((params) => ({
+    status: pick(params.get("status"), STATUSES),
+    priority: pick(params.get("priority"), PRIORITIES),
+    property: uuidOrEmpty(params.get("property")),
+  }));
+  const { status, priority, property: propertyId } = query;
   const filters: MaintenanceFilters = {
     ...(status ? { status: status as MaintenanceStatus } : {}),
     ...(priority ? { priority: priority as Priority } : {}),
@@ -76,14 +81,14 @@ export default function MaintenancePage() {
           label="Status"
           options={STATUS_FILTER}
           value={status}
-          onChange={(event) => setStatus(event.target.value)}
+          onChange={(event) => setQuery("status", event.target.value)}
         />
         <SelectField
           id="filter-priority"
           label="Priority"
           options={PRIORITY_FILTER}
           value={priority}
-          onChange={(event) => setPriority(event.target.value)}
+          onChange={(event) => setQuery("priority", event.target.value)}
         />
         {staff ? (
           <SelectField
@@ -91,7 +96,7 @@ export default function MaintenancePage() {
             label="Property"
             options={propertyFilter}
             value={propertyId}
-            onChange={(event) => setPropertyId(event.target.value)}
+            onChange={(event) => setQuery("property", event.target.value)}
           />
         ) : null}
       </fieldset>
@@ -136,5 +141,14 @@ export default function MaintenancePage() {
         <p className="text-sm text-slate-500">Showing the 50 most recent requests.</p>
       ) : null}
     </div>
+  );
+}
+
+// useSearchParams needs a Suspense boundary.
+export default function MaintenancePage() {
+  return (
+    <Suspense fallback={null}>
+      <MaintenanceList />
+    </Suspense>
   );
 }

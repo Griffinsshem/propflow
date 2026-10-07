@@ -30,6 +30,7 @@ test("a contractor takes a tenant's leak from assignment to completion", async (
 
   // The contractor finds the job on their dashboard and works it.
   await contractor.goto("/dashboard");
+  await expect(contractor.getByRole("link", { name: "Awaiting acceptance: 1" })).toBeVisible();
   const waiting = contractor.getByRole("list", { name: "Waiting for you" });
   await expect(waiting).toContainText("Leaking pipe");
   await waiting.getByRole("link", { name: "Leaking pipe" }).click();
