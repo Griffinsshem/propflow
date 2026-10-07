@@ -56,7 +56,8 @@ export function CommentForm({ orgId, requestId }: { orgId: string; requestId: st
         onChange={(event) => setBody(event.target.value)}
       />
       <p className="text-sm text-slate-500">
-        Everyone who can see this request can read comments, including the tenant who reported it.
+        Comments are visible to the tenant who reported this, to staff, and to any contractor
+        assigned to the job.
       </p>
       <Button type="submit" variant="secondary" pending={add.isPending}>
         Post comment

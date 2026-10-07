@@ -2,15 +2,13 @@
 
 import { FormAlert } from "@/components/ui/form-alert";
 import { useAttachments } from "@/features/maintenance/photo-hooks";
+import type { Attachment } from "@/lib/api/attachments";
 import { messageOf } from "@/lib/api/errors";
 
-export function PhotoGallery({ orgId, requestId }: { orgId: string; requestId: string }) {
-  const photos = useAttachments(orgId, requestId);
-  if (photos.isPending) return <p className="text-sm text-slate-500">Loading photos…</p>;
-  if (photos.isError) return <FormAlert>{messageOf(photos.error)}</FormAlert>;
-  const ready = photos.data.filter((photo) => photo.download_url);
+/** Ready photos as a grid; used wherever someone is allowed to see them. */
+export function PhotoGrid({ photos }: { photos: Attachment[] }) {
+  const ready = photos.filter((photo) => photo.download_url);
   if (ready.length === 0) return <p className="text-sm text-slate-500">No photos yet.</p>;
-
   return (
     <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {ready.map((photo, index) => (
@@ -29,4 +27,11 @@ export function PhotoGallery({ orgId, requestId }: { orgId: string; requestId: s
       ))}
     </ul>
   );
+}
+
+export function PhotoGallery({ orgId, requestId }: { orgId: string; requestId: string }) {
+  const photos = useAttachments(orgId, requestId);
+  if (photos.isPending) return <p className="text-sm text-slate-500">Loading photos…</p>;
+  if (photos.isError) return <FormAlert>{messageOf(photos.error)}</FormAlert>;
+  return <PhotoGrid photos={photos.data} />;
 }

@@ -34,9 +34,6 @@ test("a contractor takes a tenant's leak from assignment to completion", async (
   await expect(waiting).toContainText("Leaking pipe");
   await waiting.getByRole("link", { name: "Leaking pipe" }).click();
   await expect(contractor.getByRole("heading", { level: 1, name: "Leaking pipe" })).toBeVisible();
-  await expect(contractor.getByRole("link", { name: "Open the maintenance request" })).toHaveCount(
-    0,
-  );
 
   const actions = contractor.getByRole("group", { name: "Work order actions" });
   await expect(actions.getByRole("button")).toHaveText(["Accept job", "Decline job"]);
@@ -53,6 +50,15 @@ test("a contractor takes a tenant's leak from assignment to completion", async (
   await actions.getByRole("button", { name: "Mark job complete" }).click();
   await expect(contractor.getByText("Completed", { exact: true })).toBeVisible();
   await expect(actions).toHaveCount(0);
+
+  // The contractor reports back on the request itself, where the tenant reads it.
+  await contractor.getByRole("link", { name: "Open the maintenance request" }).click();
+  await expect(contractor).toHaveURL(/\/maintenance\/[0-9a-f-]{36}$/);
+  await contractor.getByLabel("Add a comment").fill("Replaced the washer; all dry now.");
+  await contractor.getByRole("button", { name: "Post comment" }).click();
+  await expect(contractor.getByRole("list", { name: "Activity" })).toContainText(
+    "Replaced the washer",
+  );
 
   // Completing the job does not resolve the request: the owner checks and closes it.
   await page.reload();
@@ -73,6 +79,7 @@ test("a contractor takes a tenant's leak from assignment to completion", async (
     "from Assigned to In progress",
     "from In progress to Resolved",
     "from Resolved to Closed",
+    "Replaced the washer; all dry now.",
   ]) {
     await expect(activity).toContainText(step);
   }
@@ -106,4 +113,48 @@ test("a contractor sees only their own jobs", async ({ page, browser }) => {
 
   await first.context().close();
   await second.context().close();
+});
+
+// A valid 1x1 PNG: the worker decodes, re-encodes and strips it like any real photo.
+const PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+  "base64",
+);
+
+test("the assigned contractor sees the job's photos", async ({ page, browser }) => {
+  await ownerWithOrganization(page, "Photo Job Estates");
+  const contractor = await addContractorWithLogin(
+    page,
+    browser,
+    "Glass Fix",
+    "general",
+    "Gina Glass",
+  );
+  await propertyWithUnits(page, "Photo Job Court", ["A1"]);
+  const tenant = await placeNewTenant(page, browser, "A1", "Tara Tenant");
+  await reportAsTenant(tenant, "Cracked window");
+  await tenant.getByLabel("Add photos").setInputFiles({
+    name: "window.png",
+    mimeType: "image/png",
+    buffer: PNG,
+  });
+  await expect(tenant.getByRole("list", { name: "Photo uploads" })).toContainText("Ready");
+  await page.goto(tenant.url());
+  await triageAndAssign(page, "Glass Fix (General)");
+  await tenant.context().close();
+
+  await contractor.goto("/dashboard");
+  await contractor
+    .getByRole("list", { name: "Waiting for you" })
+    .getByRole("link", { name: "Cracked window" })
+    .click();
+  await expect(contractor).toHaveURL(/\/work-orders\/[0-9a-f-]{36}$/);
+  const photo = contractor
+    .getByRole("region", { name: "Photos" })
+    .getByRole("img", { name: "Photo 1" });
+  await expect(photo).toBeVisible();
+  await expect
+    .poll(() => photo.evaluate((element) => (element as HTMLImageElement).naturalWidth))
+    .toBeGreaterThan(0);
+  await contractor.context().close();
 });

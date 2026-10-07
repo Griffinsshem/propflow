@@ -6,13 +6,13 @@ import type { ReactNode } from "react";
 
 import { FormAlert } from "@/components/ui/form-alert";
 import { PRIORITY_LABELS } from "@/features/maintenance/labels";
-import { isStaff } from "@/features/maintenance/permissions";
 import { useActiveMembership } from "@/features/organizations/use-active-membership";
 import { WorkOrderBadges } from "@/features/work-orders/badges";
 import { useWorkOrder } from "@/features/work-orders/hooks";
 import { locationLabel } from "@/features/work-orders/labels";
 import { WorkOrderActions } from "@/features/work-orders/work-order-actions";
 import { WorkOrderHistory } from "@/features/work-orders/work-order-history";
+import { PhotoGallery } from "@/features/maintenance/photo-gallery";
 import { ApiError, messageOf } from "@/lib/api/errors";
 import { formatDay } from "@/lib/format";
 
@@ -61,7 +61,6 @@ export default function WorkOrderPage() {
   }
 
   const data = order.data;
-  const staff = isStaff(membership.role);
   const details: [string, string][] = [
     ["Contractor", data.contractor.business_name],
     ["Priority", PRIORITY_LABELS[data.priority]],
@@ -105,15 +104,16 @@ export default function WorkOrderPage() {
             <p className="whitespace-pre-wrap text-slate-700">{data.request.access_notes}</p>
           </div>
         ) : null}
-        {staff ? (
-          <Link
-            href={`/maintenance/${data.request.id}`}
-            className="inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-500"
-          >
-            Open the maintenance request
-          </Link>
-        ) : null}
+        <Link
+          href={`/maintenance/${data.request.id}`}
+          className="inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-500"
+        >
+          Open the maintenance request
+        </Link>
       </section>
+      <Section id="photos-heading" title="Photos">
+        <PhotoGallery orgId={orgId} requestId={data.request.id} />
+      </Section>
       <Section id="history-heading" title="History">
         <WorkOrderHistory orgId={orgId} workOrderId={data.id} />
       </Section>
