@@ -1,5 +1,6 @@
 "use client";
 
+import { Building2 } from "lucide-react";
 import Link from "next/link";
 
 import { useCurrentUser } from "@/features/auth/hooks";
@@ -49,10 +50,10 @@ export default function DashboardPage() {
   const active = activeMembership(user);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Welcome, {firstName}</h1>
+    <div className="space-y-4 sm:space-y-6">
+      <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Welcome, {firstName}</h1>
       {user.memberships.length === 0 ? (
-        <section className="rounded-lg border border-dashed border-slate-300 bg-white p-6">
+        <section className="rounded-lg border border-dashed border-slate-300 bg-white p-4 sm:p-6">
           <h2 className="font-semibold">No organization yet</h2>
           <p className="mt-1 text-sm text-slate-600">
             Create an organization to start managing properties, or accept an invitation from one.
@@ -66,11 +67,19 @@ export default function DashboardPage() {
         </section>
       ) : active ? (
         <>
-          <section className="rounded-lg bg-white p-6 ring-1 ring-slate-200">
-            <h2 className="font-semibold">{active.organization_name}</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              You&apos;re signed in as <span className="capitalize">{active.role}</span>.
-            </p>
+          <section className="flex items-center gap-3 rounded-lg bg-white p-4 ring-1 ring-slate-200">
+            <span
+              aria-hidden
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600"
+            >
+              <Building2 className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="truncate font-semibold">{active.organization_name}</h2>
+              <p className="text-sm text-slate-600">
+                You&apos;re signed in as <span className="capitalize">{active.role}</span>.
+              </p>
+            </div>
           </section>
           <RoleDashboard role={active.role} orgId={active.organization_id} />
         </>

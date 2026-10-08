@@ -1,5 +1,22 @@
 "use client";
 
+import {
+  Archive,
+  Building2,
+  CalendarX,
+  CircleCheck,
+  ClipboardList,
+  Clock,
+  DoorOpen,
+  Hammer,
+  Handshake,
+  Hourglass,
+  Inbox,
+  Send,
+  TriangleAlert,
+  Users,
+  Wrench,
+} from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -100,18 +117,28 @@ export function OrganizationOverview({ orgId }: { orgId: string }) {
       ) : (
         <StatGrid label="Organization totals">
           <StatTile
+            icon={Building2}
             label="Properties"
             value={dashboard.data.counts.properties}
             href="/properties"
           />
-          <StatTile label="Units" value={dashboard.data.counts.units} />
+          <StatTile icon={DoorOpen} label="Units" value={dashboard.data.counts.units} />
           <StatTile
+            icon={Users}
             label="Active tenants"
             value={dashboard.data.counts.active_tenants}
             href="/tenants"
           />
-          <StatTile label="Open requests" value={dashboard.data.counts.open_requests} />
-          <StatTile label="Active work orders" value={dashboard.data.counts.active_work_orders} />
+          <StatTile
+            icon={Wrench}
+            label="Open requests"
+            value={dashboard.data.counts.open_requests}
+          />
+          <StatTile
+            icon={ClipboardList}
+            label="Active work orders"
+            value={dashboard.data.counts.active_work_orders}
+          />
         </StatGrid>
       )}
     </DashboardSection>
@@ -157,43 +184,55 @@ export function OperationsOverview({ orgId }: { orgId: string }) {
         <>
           <StatGrid label="Maintenance requests">
             <StatTile
+              icon={Inbox}
               label="New requests"
               value={dashboard.data.requests.new}
               href={requestLink("submitted")}
             />
             <StatTile
+              icon={Hammer}
               label="In progress"
               value={dashboard.data.requests.in_progress}
               href={requestLink("in_progress")}
             />
             <StatTile
+              icon={Hourglass}
               label="Waiting"
               value={dashboard.data.requests.waiting}
               href={requestLink("waiting")}
             />
-            <StatTile label="Urgent and open" value={dashboard.data.requests.urgent} />
             <StatTile
+              icon={TriangleAlert}
+              label="Urgent and open"
+              value={dashboard.data.requests.urgent}
+            />
+            <StatTile
+              icon={CircleCheck}
               label="Resolved this month"
               value={dashboard.data.requests.resolved_this_month}
             />
           </StatGrid>
           <StatGrid label="Work orders">
             <StatTile
+              icon={Clock}
               label="Awaiting acceptance"
               value={dashboard.data.work_orders.awaiting_acceptance}
               href={orderLink("status=assigned")}
             />
             <StatTile
+              icon={Hammer}
               label="Work in progress"
               value={dashboard.data.work_orders.in_progress}
               href={orderLink("status=in_progress")}
             />
             <StatTile
+              icon={CalendarX}
               label="Overdue work orders"
               value={dashboard.data.work_orders.overdue}
               href={orderLink("overdue=1")}
             />
             <StatTile
+              icon={CircleCheck}
               label="Completed this month"
               value={dashboard.data.work_orders.completed_this_month}
             />
@@ -234,26 +273,31 @@ export function TenantOverview({ orgId }: { orgId: string }) {
         <>
           <StatGrid label="Your requests by status">
             <StatTile
+              icon={Send}
               label="Submitted"
               value={dashboard.data.requests.submitted}
               href="/maintenance?status=submitted"
             />
             <StatTile
+              icon={Hammer}
               label="In progress"
               value={dashboard.data.requests.in_progress}
               href="/maintenance?status=in_progress"
             />
             <StatTile
+              icon={Hourglass}
               label="Waiting"
               value={dashboard.data.requests.waiting}
               href="/maintenance?status=waiting"
             />
             <StatTile
+              icon={CircleCheck}
               label="Resolved"
               value={dashboard.data.requests.resolved}
               href="/maintenance?status=resolved"
             />
             <StatTile
+              icon={Archive}
               label="Closed"
               value={dashboard.data.requests.closed}
               href="/maintenance?status=closed"
@@ -281,26 +325,31 @@ export function ContractorOverview({ orgId }: { orgId: string }) {
       ) : (
         <StatGrid label="Your work orders by stage">
           <StatTile
+            icon={Clock}
             label="Awaiting acceptance"
             value={dashboard.data.work_orders.awaiting_acceptance}
             href="/work-orders?status=assigned"
           />
           <StatTile
+            icon={Handshake}
             label="Accepted"
             value={dashboard.data.work_orders.accepted}
             href="/work-orders?status=accepted"
           />
           <StatTile
+            icon={Hammer}
             label="In progress"
             value={dashboard.data.work_orders.in_progress}
             href="/work-orders?status=in_progress"
           />
           <StatTile
+            icon={CalendarX}
             label="Overdue"
             value={dashboard.data.work_orders.overdue}
             href="/work-orders?overdue=1"
           />
           <StatTile
+            icon={CircleCheck}
             label="Completed this month"
             value={dashboard.data.work_orders.completed_this_month}
           />
