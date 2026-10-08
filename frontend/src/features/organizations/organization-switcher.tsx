@@ -1,21 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import { useId } from "react";
 
 import { useActivateOrganization } from "@/features/organizations/hooks";
 import type { CurrentUser } from "@/lib/api/auth";
 
 export function OrganizationSwitcher({ user }: { user: CurrentUser }) {
   const activate = useActivateOrganization();
+  // The picker appears in the header and in the phone menu: each copy needs its own id.
+  const selectId = useId();
   if (user.memberships.length === 0) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      <label htmlFor="active-organization" className="sr-only">
+      <label htmlFor={selectId} className="sr-only">
         Active organization
       </label>
       <select
-        id="active-organization"
+        id={selectId}
         value={user.active_organization_id ?? ""}
         disabled={activate.isPending}
         onChange={(event) => activate.mutate(event.target.value)}

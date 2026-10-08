@@ -21,11 +21,11 @@ function RoleDashboard({ role, orgId }: { role: Role; orgId: string }) {
       return (
         <>
           <OrganizationOverview orgId={orgId} />
-          <OperationsOverview orgId={orgId} />
+          <OperationsOverview orgId={orgId} role={role} />
         </>
       );
     case "manager":
-      return <OperationsOverview orgId={orgId} />;
+      return <OperationsOverview orgId={orgId} role={role} />;
     case "tenant":
       return (
         <>

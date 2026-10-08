@@ -34,6 +34,7 @@ import { StatusBadge } from "@/features/maintenance/status-badge";
 import { useProperties } from "@/features/properties/hooks";
 import { WorkOrderBadges } from "@/features/work-orders/badges";
 import { locationLabel } from "@/features/work-orders/labels";
+import type { Role } from "@/lib/api/auth";
 import { messageOf } from "@/lib/api/errors";
 import type { MaintenanceRequest } from "@/lib/api/maintenance";
 import type { WorkOrder } from "@/lib/api/work-orders";
@@ -145,7 +146,7 @@ export function OrganizationOverview({ orgId }: { orgId: string }) {
   );
 }
 
-export function OperationsOverview({ orgId }: { orgId: string }) {
+export function OperationsOverview({ orgId, role }: { orgId: string; role: Role }) {
   const [propertyId, setPropertyId] = useState("");
   const properties = useProperties(orgId, "active");
   const dashboard = useOperationsDashboard(orgId, propertyId || null);
@@ -176,6 +177,13 @@ export function OperationsOverview({ orgId }: { orgId: string }) {
         ) : null
       }
     >
+      {properties.data && choices.length === 0 ? (
+        <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200">
+          {role === "manager"
+            ? "You aren't assigned to any properties yet, so there's nothing to manage here. An owner can assign you from a property's page."
+            : "Add your first property to start receiving maintenance requests."}
+        </p>
+      ) : null}
       {dashboard.isPending ? (
         loading
       ) : dashboard.isError ? (

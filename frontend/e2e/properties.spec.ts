@@ -89,6 +89,9 @@ test("a manager sees only assigned properties and can add units there", async ({
   const context = await browser.newContext();
   const manager = await context.newPage();
   await acceptAsNewUser(manager, link, "Mary Manager");
+  await expect(
+    manager.getByText("You aren't assigned to any properties yet", { exact: false }),
+  ).toBeVisible();
 
   await manager.goto("/properties");
   await expect(manager.getByText("No properties are assigned to you yet.")).toBeVisible();
