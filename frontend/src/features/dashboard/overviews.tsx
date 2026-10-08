@@ -165,7 +165,7 @@ export function OperationsOverview({ orgId }: { orgId: string }) {
           <SelectField
             id="operations-property"
             label="Property"
-            className="min-w-48"
+            className="w-full sm:w-auto sm:min-w-48"
             value={propertyId}
             onChange={(event) => setPropertyId(event.target.value)}
             options={[

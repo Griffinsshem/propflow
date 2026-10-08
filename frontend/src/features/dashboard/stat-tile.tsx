@@ -70,7 +70,7 @@ export function DashboardSection({
       aria-labelledby={id}
       className="space-y-4 rounded-lg bg-white p-4 ring-1 ring-slate-200 sm:space-y-5 sm:p-6"
     >
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <h2 id={id} className="font-semibold">
           {title}
         </h2>

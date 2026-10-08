@@ -31,6 +31,8 @@ test("on a phone, the header is one row and every section is in the menu", async
     OWNER_SECTIONS,
   );
   await expect(menu.getByRole("button", { name: "Close menu" })).toBeFocused();
+  const menuOverflow = await menu.evaluate((panel) => panel.scrollWidth - panel.clientWidth);
+  expect(menuOverflow).toBeLessThanOrEqual(0);
 
   await menu.getByRole("link", { name: "Properties" }).click();
   await expect(page).toHaveURL(/\/properties$/);

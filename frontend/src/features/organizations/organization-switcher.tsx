@@ -10,7 +10,7 @@ export function OrganizationSwitcher({ user }: { user: CurrentUser }) {
   if (user.memberships.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
       <label htmlFor="active-organization" className="sr-only">
         Active organization
       </label>
@@ -19,7 +19,7 @@ export function OrganizationSwitcher({ user }: { user: CurrentUser }) {
         value={user.active_organization_id ?? ""}
         disabled={activate.isPending}
         onChange={(event) => activate.mutate(event.target.value)}
-        className="rounded-md border-0 py-1.5 pl-3 pr-8 text-sm text-slate-900 ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-indigo-600 disabled:opacity-60"
+        className="max-w-full rounded-md border-0 py-1.5 pl-3 pr-8 text-sm text-slate-900 ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-indigo-600 disabled:opacity-60"
       >
         {user.active_organization_id === null ? (
           <option value="" disabled>
@@ -27,10 +27,7 @@ export function OrganizationSwitcher({ user }: { user: CurrentUser }) {
           </option>
         ) : null}
         {user.memberships.map((membership) => (
-          <option
-            key={membership.organization_id}
-            value={membership.organization_id}
-          >
+          <option key={membership.organization_id} value={membership.organization_id}>
             {membership.organization_name}
           </option>
         ))}
