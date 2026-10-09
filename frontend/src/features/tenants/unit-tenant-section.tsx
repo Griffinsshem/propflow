@@ -19,9 +19,10 @@ function CurrentTenant({ orgId, unit, tenant }: { orgId: string; unit: Unit; ten
   const end = useEndTenancy(orgId);
   const [destination, setDestination] = useState("");
   const failure = move.error ?? end.error;
-  const vacant = (units.data?.items ?? [])
-    .filter((candidate) => candidate.status === "vacant" && candidate.id !== unit.id)
-    .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+  const unitItems: Unit[] = units.data?.items ?? [];
+  const vacant: Unit[] = unitItems
+    .filter((candidate: Unit) => candidate.status === "vacant" && candidate.id !== unit.id)
+    .sort((a: Unit, b: Unit) => a.label.localeCompare(b.label, undefined, { numeric: true }));
 
   const details: [string, string][] = [
     ["Name", tenant.full_name],
