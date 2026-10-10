@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { linkSentTo, PASSWORD, registerNewUser, signIn, uniqueEmail } from "./support";
+import { linkSentTo, PASSWORD, registerNewUser, uniqueEmail } from "./support";
 
 const NEW_PASSWORD = "a brand new passphrase";
 
