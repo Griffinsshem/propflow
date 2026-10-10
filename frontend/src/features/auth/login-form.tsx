@@ -84,16 +84,23 @@ export function LoginForm({
         error={errors.password?.message}
         {...register("password")}
       />
+      {showRegisterLink ? (
+        <div className="-mt-3 text-right">
+          <Link
+            href="/forgot-password"
+            className="text-sm font-semibold text-indigo-600 hover:text-indigo-500"
+          >
+            Forgot password?
+          </Link>
+        </div>
+      ) : null}
       <Button type="submit" pending={isSubmitting} className="w-full">
         {isSubmitting ? "Signing in…" : "Sign in"}
       </Button>
       {showRegisterLink ? (
         <p className="text-center text-sm text-slate-600">
           New to PropFlow?{" "}
-          <Link
-            href="/register"
-            className="font-semibold text-indigo-600 hover:text-indigo-500"
-          >
+          <Link href="/register" className="font-semibold text-indigo-600 hover:text-indigo-500">
             Create an account
           </Link>
         </p>

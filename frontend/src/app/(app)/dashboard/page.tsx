@@ -3,6 +3,7 @@
 import { Building2 } from "lucide-react";
 import Link from "next/link";
 
+import { VerifyEmailBanner } from "@/features/account/verify-email-banner";
 import { useCurrentUser } from "@/features/auth/hooks";
 import {
   ContractorOverview,
@@ -52,6 +53,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Welcome, {firstName}</h1>
+      {user.email_verified ? null : <VerifyEmailBanner email={user.email} />}
       {user.memberships.length === 0 ? (
         <section className="rounded-lg border border-dashed border-slate-300 bg-white p-4 sm:p-6">
           <h2 className="font-semibold">No organization yet</h2>
