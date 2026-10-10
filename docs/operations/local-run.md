@@ -13,92 +13,73 @@
 `dev.sh` runs what production runs: gunicorn (2 workers), a Celery worker and scheduler with the
 commands from `render.yaml`, and a production build of the frontend. Logs are prefixed `[api]`,
 `[worker]`, `[beat]` and `[web]`. Email goes to `/tmp/propflow-mail` and uploads to
-`/tmp/propflow-storage` (if you set `TMPDIR`, the seed's reset uses that instead).
+`/tmp/propflow-storage`. Emails are sent by the worker, so allow a few seconds before reading them.
 
-**One browser identity per person:** a normal window, a private window and a second browser can
-be three different people at once. Two normal windows of one browser are the same person.
+**Browser tests use the same ports:** stop `dev.sh` and run the API alone
+(`frontend-development.md`) before `npx playwright test`.
+
+## One browser identity per person
+
+A normal window, a private window and a second browser are three different people. Two normal
+windows of one browser are the same person. **Private-window sign-ins last only while a private
+window stays open:** closing them all, or a browser restart (such as a pending update), signs
+that person out. That is the browser, not PropFlow.
 
 ## Demo accounts (password: `correct horse battery staple`)
 
-| Email | Who | Role |
-|---|---|---|
-| demo-owner@example.com | Olivia Owner | owner |
-| demo-manager@example.com | Mary Manager | manager, assigned to Riverside Court only |
-| demo-tenant@example.com | Tom Tenant | tenant, Riverside Court A1 |
-| demo-tenant2@example.com | Tia Tenant | tenant, Riverside Court A2 |
-| demo-plumber@example.com | Fred Fixit | contractor, Fixit Plumbing |
-| demo-electrician@example.com | Elle Sparks | contractor, Bright Sparks Electrical |
+| Email | Who | Role | Email verified? |
+|---|---|---|---|
+| demo-owner@example.com | Olivia Owner | owner | no (registered directly) |
+| demo-manager@example.com | Mary Manager | manager, Riverside Court only | yes (joined by invitation) |
+| demo-tenant@example.com | Tom Tenant | tenant, Riverside Court A1 | yes (invitation) |
+| demo-tenant2@example.com | Tia Tenant | tenant, Riverside Court A2 | yes (invitation) |
+| demo-plumber@example.com | Fred Fixit | contractor, Fixit Plumbing | yes (invitation) |
+| demo-electrician@example.com | Elle Sparks | contractor, Bright Sparks Electrical | yes (invitation) |
 
 Seeded state: "Leaking kitchen tap" (Tom, submitted), "No hot water" (Tia, urgent, assigned to
 Fixit Plumbing, with the owner's comment), "Hallway light flickering" (Hillside Homes common area,
 submitted, no manager assigned there).
 
-## Who is notified (from the API's rules)
+## Rules confirmed against the code
 
-The person who acts is never notified. Reported: the property's managers, or the owners if none.
-Status changed: the reporter. Comment: the reporter, responsible staff and any contractor on the
-request. Work order assigned: the contractor. Work order moved: staff if the contractor moved it,
-otherwise the contractor.
+**Email verification.** Registering directly leaves an account unverified: the dashboard shows a
+banner with "Resend email" until the emailed link is used. Accepting an emailed invitation
+verifies the address (`organizations/invitations.py`: the token was delivered to that mailbox).
+A password reset does not change verification. Verification links can be reopened until they
+expire (verifying twice changes nothing); password reset links work once.
 
-## 1. Owner (normal window)
+**Forgot password** answers the same for every address, so it cannot reveal who has an account,
+but only real accounts receive an email.
 
-- [ ] Dashboard: Properties 2, Units 4, Active tenants 2; Operations: New requests 2,
-      Urgent and open 1, Awaiting acceptance 1.
-- [ ] "New requests" opens Maintenance filtered to Submitted, showing exactly two requests. Reload:
-      the filter stays (it lives in the address).
-- [ ] Properties: Riverside Court shows Mary Manager under Managers; Hillside Homes has none.
-- [ ] Contractors: Fixit Plumbing and Bright Sparks Electrical, both "can sign in".
+**Notifications.** The person who acts is never notified. Reported: the property's managers, or
+the owners if none. Status changed: the reporter. Comment: the reporter, responsible staff and any
+contractor on the request. Work order assigned: the contractor. Work order moved: staff if the
+contractor moved it, otherwise the contractor.
 
-## 2. Manager (private window)
+**Managers** see only properties assigned to them. A new manager's dashboard says so until an
+owner assigns them from a property's page.
 
-- [ ] Bell shows unread notifications: the two tenant reports and the owner's comment on
-      "No hot water" (all at Riverside Court, her property).
-- [ ] Properties lists Riverside Court only. Maintenance does not list "Hallway light flickering"
-      (Hillside Homes is not hers).
-- [ ] Triage "Leaking kitchen tap", assign it to Fixit Plumbing with a due date next week.
+## The hand-test checklist
 
-## 3. Tenant (second browser, Tom)
-
-- [ ] Dashboard: "Your home: Riverside Court · Unit A1"; Your requests: Submitted or more,
-      depending on what the manager did.
-- [ ] Notifications: "Maintenance request updated" for each move the manager made on his tap.
-- [ ] Report a new issue and add a photo from your computer. Watch the `[worker]` log for
-      `maintenance.process_attachment`: the photo goes "Processing…" then "Ready" via the real
-      worker, not inline.
-- [ ] Open Tia's request by its address (copy it from the owner's window): it must say it
-      doesn't exist or isn't visible to you.
-
-## 4. Contractor (sign in as Fred in the private window after the manager signs out)
-
-- [ ] Dashboard: Your workload shows Awaiting acceptance (1 or 2), "Waiting for you" lists them.
-- [ ] Open "No hot water": instructions, access notes, photos (none seeded), and the request's
-      conversation through "Open the maintenance request".
-- [ ] Accept, Start, then post a comment on the request, then Mark job complete.
-- [ ] Open "Hallway light flickering" by its address: not visible to you.
-
-## 5. Back as owner
-
-- [ ] Bell: Fred's work order moves (staff are notified when the contractor acts).
-- [ ] "No hot water" is In progress (completion doesn't resolve it): Mark resolved, then Close.
-- [ ] Sign in as Tia: her timeline shows every step and Fred's comment; her bell has the updates.
-
-## 6. Email, and two gaps expected today
-
-- [ ] Team: invite a new manager to an address you make up. `python3 scripts/mailbox.py --to <it>`
-      prints the invitation link; open it in a fresh private window, create the account, and land
-      in Riverside Estates as manager.
-- [ ] **Expected gap:** registering sends a verification email, but the frontend has no
-      verify-email page yet, so its link leads to "page not found".
-- [ ] **Expected gap:** the API supports "forgot password", but the frontend has no page for it
-      yet, so there is no way to reset a password from the sign-in screen.
-
-## 7. Edge cases to try on purpose
-
-- [ ] Two windows on the same property as the owner: edit the city in one, save; edit the name in
-      the other, save: the conflict notice lists the other change; "Keep my changes" saves both.
-- [ ] Unit page: move a tenant out, then *immediately* type a floor and save. Known trade-off:
-      if the page refreshes mid-typing, the typed value can be lost. Is it noticeable?
-- [ ] Upload a file that is not an image (rename a .txt to .png): "Rejected" with a reason.
+1. **Owner:** dashboard counts link to filtered lists (filters survive reload); properties,
+   managers, contractors; phone validation on contractors.
+2. **Manager:** notifications; only assigned properties; triage and assign a contractor.
+3. **Tenant:** home on the dashboard; report an issue; a real photo goes "Processing…" then
+   "Ready" via the worker (`[worker] … maintenance.process_attachment`); a fake `.png`
+   (`echo "not a picture" > ~/Desktop/fake-photo.png`) is "Rejected"; comment.
+4. **Contractor:** workload counts; accept, start, comment on the request, complete; decline
+   another job with a reason.
+5. **Owner and tenants again:** resolve and close; the tenant's timeline shows every step.
+6. **Invitations:** invite an address from Team, read the link with `mailbox.py`, open it in a
+   fresh private window, create the account, land in the organization.
+7. **Accounts:** "Forgot password?" from sign-in, reset from the emailed link, old password
+   refused, link refused the second time; verify an unverified account (Olivia) from the
+   dashboard banner.
+8. **Access:** another person's request address shows "not visible to you"; a tenant typing
+   `/contractors` or `/settings/team` is refused.
+9. **Edge cases:** two windows editing the same property show the conflict notice and keep both
+   changes; phone view (F12, Ctrl+Shift+M, 360 × 800) has a one-row header, a menu with every
+   section, and no sideways scrolling.
 
 ## Reporting what you find
 
