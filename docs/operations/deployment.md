@@ -128,3 +128,18 @@ only on error rates:
 2. **Frontend** deployed on Vercel with the proxy secret, and the hop-count verification above.
 3. **Database backups** confirmed on the chosen Postgres plan, with a test restore.
 4. **Custom domain** and HTTPS for the frontend.
+
+## The free plan (render.free.yaml, ADR 0019)
+
+Order matters, because the API only accepts requests from the frontend's exact address:
+
+1. Vercel: import the repository with root directory `frontend`, deploy once, and note the
+   production address (`https://<project>.vercel.app`).
+2. Render: New, then Blueprint, with blueprint path `render.free.yaml`. Enter the prompted
+   values: `DATABASE_URL` (Neon, `postgresql+psycopg://…`), `FRONTEND_ORIGIN` (step 1),
+   the four `S3_*` values (R2), `SMTP_USERNAME`, `SMTP_PASSWORD` (Brevo SMTP key), `MAIL_FROM`.
+3. Vercel: set server-only `API_ORIGIN` (the Render service address), `PROXY_SHARED_SECRET`
+   (copied from the Render service), and `STORAGE_ORIGIN` (the R2 endpoint), then redeploy.
+4. R2: add the Vercel address to the bucket's CORS `AllowedOrigins`.
+5. Verify: `/health` on Render, sign-up with a real email, an invitation, a password reset,
+   a photo upload, the client-IP check, and a phone-sized pass.

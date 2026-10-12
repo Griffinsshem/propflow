@@ -1,0 +1,84 @@
+# PropFlow on Render's free plan (ADR 0019). The paid production blueprint is render.yaml.
+# Differences: free API instance (sleeps when idle), no Celery worker or scheduler (tasks run
+# inside requests), database on Neon (DATABASE_URL), free Key Value for rate limits only, and
+# email over SMTP port 2525 because free instances cannot reach ports 25, 465 or 587.
+# No secret is written here: Render generates them or prompts for them on creation.
+
+services:
+  - type: web
+    name: propflow-api
+    runtime: python
+    region: frankfurt
+    plan: free
+    rootDir: backend
+    # Free instances have no pre-deploy step: migrate at the end of the build instead.
+    # A failed migration fails the build, so a broken release never starts.
+    buildCommand: pip install -r requirements.txt && flask db upgrade
+    startCommand: gunicorn -c gunicorn.conf.py wsgi:app
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    numInstances: 1
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: FLASK_APP
+        value: wsgi:app
+      - key: BACKGROUND_TASKS
+        value: sync # no worker on the free plan: email and photo processing run in the request
+      - key: WEB_CONCURRENCY
+        value: "2" # two processes in 512 MB, so one slow email or photo does not block everyone
+      - key: GUNICORN_TIMEOUT
+        value: "60" # photo processing on 0.1 CPU can exceed the default 30 s
+      - key: DB_POOL_SIZE
+        value: "2"
+      - key: DB_MAX_OVERFLOW
+        value: "0"
+      - key: TRUSTED_PROXY_COUNT
+        value: "2" # Vercel + Render edge; verify per the runbook. Safe only with the proxy secret.
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PROXY_SHARED_SECRET
+        generateValue: true # copy into Vercel as a server-only variable
+      - key: STORAGE_BACKEND
+        value: s3
+      - key: S3_REGION
+        value: auto
+      - key: EMAIL_BACKEND
+        value: smtp
+      - key: SMTP_HOST
+        value: smtp-relay.brevo.com
+      - key: SMTP_PORT
+        value: "2525" # free instances block 25, 465 and 587
+      - key: SMTP_SECURITY
+        value: starttls
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: propflow-redis
+          property: connectionString
+      # Prompted on creation (secrets, or values only known then):
+      - key: DATABASE_URL
+        sync: false # Neon direct connection, postgresql+psycopg://…?sslmode=require
+      - key: FRONTEND_ORIGIN
+        sync: false # the Vercel production address, https://…vercel.app
+      - key: S3_ENDPOINT_URL
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+
+  - type: keyvalue
+    name: propflow-redis
+    region: frankfurt
+    plan: free
+    ipAllowList: [] # private network only
+    maxmemoryPolicy: allkeys-lru # rate-limit counters only (no task queue): safe to evict when full
