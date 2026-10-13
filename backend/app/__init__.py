@@ -14,6 +14,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from app.api.v1 import register_v1
 from app.auth.middleware import register_auth_middleware
 from app.auth.passwords import init_password_hasher
+from app.common.client_ip import ProxiedClientIP
 from app.common.db_timing import register_db_timing
 from app.common.errors import register_error_handlers
 from app.common.health import health_bp
@@ -37,6 +38,9 @@ def create_app(app_env: str | None = None, overrides: Mapping[str, Any] | None =
     app = Flask(__name__)
     app.config.from_mapping(config)
 
+    if app.config["PROXY_SHARED_SECRET"]:
+        # Innermost, so it has the final say on REMOTE_ADDR for proxied requests (ADR 0020).
+        app.wsgi_app = ProxiedClientIP(app.wsgi_app, app.config["PROXY_SHARED_SECRET"])  # type: ignore[method-assign]
     proxy_hops = app.config["TRUSTED_PROXY_COUNT"]
     if proxy_hops > 0:
         # Read the client IP from exactly N trusted hops; anything further left is spoofable.

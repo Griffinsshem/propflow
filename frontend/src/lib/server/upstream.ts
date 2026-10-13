@@ -27,16 +27,9 @@ const FORWARDED_RESPONSE_HEADERS = [
 ] as const;
 
 /** The API URL for a proxied path, or null for anything that could escape /api/v1. */
-export function upstreamUrl(
-  origin: string,
-  segments: string[],
-  search: string,
-): URL | null {
+export function upstreamUrl(origin: string, segments: string[], search: string): URL | null {
   const unsafe = (segment: string) =>
-    segment === "" ||
-    segment === "." ||
-    segment === ".." ||
-    /[/\\]/.test(segment);
+    segment === "" || segment === "." || segment === ".." || /[/\\]/.test(segment);
   if (segments.length === 0 || segments.some(unsafe)) {
     return null;
   }
@@ -61,6 +54,8 @@ export function upstreamRequestHeaders(
   if (options.secret) headers.set(PROXY_SECRET_HEADER, options.secret);
   // Exactly one value: the hosting edge in front of the API appends its own hop after it.
   if (options.clientIp) headers.set("x-forwarded-for", options.clientIp);
+  // The API trusts this header only alongside the proxy secret (ADR 0020).
+  if (options.clientIp) headers.set("x-propflow-client-ip", options.clientIp);
   return headers;
 }
 

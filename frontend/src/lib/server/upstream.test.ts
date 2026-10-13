@@ -1,21 +1,13 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import {
-  downstreamHeaders,
-  upstreamRequestHeaders,
-  upstreamUrl,
-} from "./upstream";
+import { downstreamHeaders, upstreamRequestHeaders, upstreamUrl } from "./upstream";
 
 describe("upstreamUrl", () => {
   it("builds API URLs and keeps the query string", () => {
-    expect(
-      upstreamUrl(
-        "http://api:5000",
-        ["maintenance", "abc"],
-        "?limit=5",
-      )?.toString(),
-    ).toBe("http://api:5000/api/v1/maintenance/abc?limit=5");
+    expect(upstreamUrl("http://api:5000", ["maintenance", "abc"], "?limit=5")?.toString()).toBe(
+      "http://api:5000/api/v1/maintenance/abc?limit=5",
+    );
   });
 
   it.each([
@@ -51,10 +43,7 @@ describe("upstreamRequestHeaders", () => {
   });
 
   it("sends no secret header when none is configured", () => {
-    const headers = upstreamRequestHeaders(
-      new Headers({ "x-proxy-secret": "spoofed" }),
-      {},
-    );
+    const headers = upstreamRequestHeaders(new Headers({ "x-proxy-secret": "spoofed" }), {});
     expect(headers.get("x-proxy-secret")).toBeNull();
   });
 });
