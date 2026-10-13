@@ -14,9 +14,7 @@ export function TextAreaField({
   ...textarea
 }: TextAreaFieldProps) {
   const errorId = error ? `${id}-error` : undefined;
-  const ring = error
-    ? "ring-red-400 focus:ring-red-500"
-    : "ring-slate-300 focus:ring-indigo-600";
+  const ring = error ? "ring-red-400 focus:ring-red-500" : "ring-slate-300 focus:ring-indigo-600";
   return (
     <div className={className}>
       <label htmlFor={id} className="block text-sm font-medium text-slate-900">

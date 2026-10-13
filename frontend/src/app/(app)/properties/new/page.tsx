@@ -42,15 +42,12 @@ export default function NewPropertyPage() {
       const property = await create.mutateAsync(toPropertyInput(values));
       router.replace(`/properties/${property.id}`);
     } catch (error) {
-      if (!applyFieldErrors(error, setError, PROPERTY_FIELDS))
-        setFormError(messageOf(error));
+      if (!applyFieldErrors(error, setError, PROPERTY_FIELDS)) setFormError(messageOf(error));
     }
   });
 
   if (!membership || !canManageProperties(membership.role)) {
-    return (
-      <p className="text-sm text-slate-600">Only owners can add properties.</p>
-    );
+    return <p className="text-sm text-slate-600">Only owners can add properties.</p>;
   }
 
   return (
@@ -62,11 +59,7 @@ export default function NewPropertyPage() {
         className="mt-6 space-y-5 rounded-lg bg-white p-6 ring-1 ring-slate-200"
       >
         {formError ? <FormAlert>{formError}</FormAlert> : null}
-        <PropertyFields
-          register={register}
-          errors={errors}
-          showStatus={false}
-        />
+        <PropertyFields register={register} errors={errors} showStatus={false} />
         <Button type="submit" pending={isSubmitting}>
           {isSubmitting ? "Creating…" : "Create property"}
         </Button>

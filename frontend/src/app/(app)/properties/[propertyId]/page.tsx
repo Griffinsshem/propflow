@@ -8,29 +8,15 @@ import { FormAlert } from "@/components/ui/form-alert";
 import { useActiveMembership } from "@/features/organizations/use-active-membership";
 import { BuildingsSection } from "@/features/properties/buildings-section";
 import { useProperty } from "@/features/properties/hooks";
-import {
-  PROPERTY_STATUS_LABELS,
-  PROPERTY_TYPE_LABELS,
-} from "@/features/properties/labels";
+import { PROPERTY_STATUS_LABELS, PROPERTY_TYPE_LABELS } from "@/features/properties/labels";
 import { ManagersSection } from "@/features/properties/managers-section";
-import {
-  canManageProperties,
-  canManageUnits,
-} from "@/features/properties/permissions";
+import { canManageProperties, canManageUnits } from "@/features/properties/permissions";
 import { PropertyDetailsForm } from "@/features/properties/property-details-form";
 import { UnitsSection } from "@/features/properties/units-section";
 import { ApiError, messageOf } from "@/lib/api/errors";
 import type { Property } from "@/lib/api/properties";
 
-function Section({
-  id,
-  title,
-  children,
-}: {
-  id: string;
-  title: string;
-  children: ReactNode;
-}) {
+function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
     <section
       aria-labelledby={id}
@@ -67,10 +53,7 @@ function PropertySummary({ property }: { property: Property }) {
 }
 
 const backLink = (
-  <Link
-    href="/properties"
-    className="text-sm font-semibold text-indigo-600 hover:text-indigo-500"
-  >
+  <Link href="/properties" className="text-sm font-semibold text-indigo-600 hover:text-indigo-500">
     ← Properties
   </Link>
 );
@@ -82,15 +65,11 @@ export default function PropertyPage() {
   const property = useProperty(orgId, propertyId);
 
   if (!membership || orgId === null) {
-    return (
-      <p className="text-sm text-slate-600">Select an organization first.</p>
-    );
+    return <p className="text-sm text-slate-600">Select an organization first.</p>;
   }
-  if (property.isPending)
-    return <p className="text-sm text-slate-500">Loading…</p>;
+  if (property.isPending) return <p className="text-sm text-slate-500">Loading…</p>;
   if (property.isError) {
-    const notFound =
-      property.error instanceof ApiError && property.error.status === 404;
+    const notFound = property.error instanceof ApiError && property.error.status === 404;
     return (
       <div className="space-y-4">
         {backLink}
@@ -123,11 +102,7 @@ export default function PropertyPage() {
         )}
       </Section>
       <Section id="buildings-heading" title="Buildings">
-        <BuildingsSection
-          orgId={orgId}
-          propertyId={data.id}
-          canEdit={isOwner}
-        />
+        <BuildingsSection orgId={orgId} propertyId={data.id} canEdit={isOwner} />
       </Section>
       <Section id="units-heading" title="Units">
         <UnitsSection

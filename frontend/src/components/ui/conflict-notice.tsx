@@ -8,20 +8,13 @@ type ConflictNoticeProps = {
   onKeepMine: () => void;
 };
 
-export function ConflictNotice({
-  what,
-  changes,
-  onUseTheirs,
-  onKeepMine,
-}: ConflictNoticeProps) {
+export function ConflictNotice({ what, changes, onUseTheirs, onKeepMine }: ConflictNoticeProps) {
   return (
     <div
       role="alert"
       className="space-y-3 rounded-md bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200"
     >
-      <p className="font-semibold">
-        Someone else changed this {what} while you were editing.
-      </p>
+      <p className="font-semibold">Someone else changed this {what} while you were editing.</p>
       {changes.length > 0 ? (
         <div>
           <p>Their changes:</p>

@@ -1,12 +1,7 @@
 import { apiRequest } from "./client";
 import type { Page } from "./pagination";
 
-export const PROPERTY_TYPES = [
-  "residential",
-  "commercial",
-  "mixed_use",
-  "estate",
-] as const;
+export const PROPERTY_TYPES = ["residential", "commercial", "mixed_use", "estate"] as const;
 export const PROPERTY_STATUSES = ["active", "archived"] as const;
 export const UNIT_STATUSES = ["vacant", "occupied", "unavailable"] as const;
 
@@ -39,9 +34,7 @@ export type PropertyInput = {
   description: string | null;
 };
 
-export type PropertyChanges = Partial<
-  PropertyInput & { status: PropertyStatus }
->;
+export type PropertyChanges = Partial<PropertyInput & { status: PropertyStatus }>;
 
 export type Building = {
   id: string;
@@ -88,62 +81,31 @@ export const propertiesApi = {
     apiRequest<Page<Property>>(`/properties?status=${status}&limit=100`, {
       signal,
     }),
-  get: (id: string, signal?: AbortSignal) =>
-    apiRequest<Property>(propertyPath(id), { signal }),
-  create: (body: PropertyInput) =>
-    apiRequest<Property>("/properties", { method: "POST", body }),
-  update: ({
-    id,
-    version,
-    changes,
-  }: {
-    id: string;
-    version: number;
-    changes: PropertyChanges;
-  }) =>
+  get: (id: string, signal?: AbortSignal) => apiRequest<Property>(propertyPath(id), { signal }),
+  create: (body: PropertyInput) => apiRequest<Property>("/properties", { method: "POST", body }),
+  update: ({ id, version, changes }: { id: string; version: number; changes: PropertyChanges }) =>
     apiRequest<Property>(propertyPath(id), {
       method: "PATCH",
       body: { ...changes, version },
     }),
   listBuildings: (id: string, signal?: AbortSignal) =>
     apiRequest<Building[]>(`${propertyPath(id)}/buildings`, { signal }),
-  createBuilding: ({
-    propertyId,
-    name,
-  }: {
-    propertyId: string;
-    name: string;
-  }) =>
+  createBuilding: ({ propertyId, name }: { propertyId: string; name: string }) =>
     apiRequest<Building>(`${propertyPath(propertyId)}/buildings`, {
       method: "POST",
       body: { name },
     }),
   listManagers: (id: string, signal?: AbortSignal) =>
     apiRequest<PropertyManager[]>(`${propertyPath(id)}/managers`, { signal }),
-  assignManager: ({
-    propertyId,
-    membershipId,
-  }: {
-    propertyId: string;
-    membershipId: string;
-  }) =>
+  assignManager: ({ propertyId, membershipId }: { propertyId: string; membershipId: string }) =>
     apiRequest<PropertyManager>(`${propertyPath(propertyId)}/managers`, {
       method: "POST",
       body: { membership_id: membershipId },
     }),
-  unassignManager: ({
-    propertyId,
-    membershipId,
-  }: {
-    propertyId: string;
-    membershipId: string;
-  }) =>
-    apiRequest<void>(
-      `${propertyPath(propertyId)}/managers/${enc(membershipId)}`,
-      {
-        method: "DELETE",
-      },
-    ),
+  unassignManager: ({ propertyId, membershipId }: { propertyId: string; membershipId: string }) =>
+    apiRequest<void>(`${propertyPath(propertyId)}/managers/${enc(membershipId)}`, {
+      method: "DELETE",
+    }),
 };
 
 export const unitsApi = {
@@ -151,8 +113,7 @@ export const unitsApi = {
     apiRequest<Page<Unit>>(`/units?property_id=${enc(propertyId)}&limit=100`, {
       signal,
     }),
-  get: (id: string, signal?: AbortSignal) =>
-    apiRequest<Unit>(`/units/${enc(id)}`, { signal }),
+  get: (id: string, signal?: AbortSignal) => apiRequest<Unit>(`/units/${enc(id)}`, { signal }),
   create: (body: UnitInput & { property_id: string }) =>
     apiRequest<Unit>("/units", { method: "POST", body }),
   update: ({

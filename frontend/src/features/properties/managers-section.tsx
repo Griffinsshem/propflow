@@ -14,13 +14,7 @@ import {
 import { useMembers } from "@/features/team/hooks";
 import { messageOf } from "@/lib/api/errors";
 
-export function ManagersSection({
-  orgId,
-  propertyId,
-}: {
-  orgId: string;
-  propertyId: string;
-}) {
+export function ManagersSection({ orgId, propertyId }: { orgId: string; propertyId: string }) {
   const managers = usePropertyManagers(orgId, propertyId);
   const members = useMembers(orgId);
   const assign = useAssignManager(orgId, propertyId);
@@ -30,18 +24,13 @@ export function ManagersSection({
   if (managers.isPending || members.isPending) {
     return <p className="text-sm text-slate-500">Loading…</p>;
   }
-  if (managers.isError)
-    return <FormAlert>{messageOf(managers.error)}</FormAlert>;
+  if (managers.isError) return <FormAlert>{messageOf(managers.error)}</FormAlert>;
   if (members.isError) return <FormAlert>{messageOf(members.error)}</FormAlert>;
 
-  const assignedIds = new Set(
-    managers.data.map((manager) => manager.membership_id),
-  );
+  const assignedIds = new Set(managers.data.map((manager) => manager.membership_id));
   const candidates = members.data.items.filter(
     (member) =>
-      member.role === "manager" &&
-      member.status === "active" &&
-      !assignedIds.has(member.id),
+      member.role === "manager" && member.status === "active" && !assignedIds.has(member.id),
   );
   const failure = assign.error ?? unassign.error;
 
@@ -50,33 +39,24 @@ export function ManagersSection({
       {failure ? <FormAlert>{messageOf(failure)}</FormAlert> : null}
       {managers.data.length === 0 ? (
         <p className="text-sm text-slate-500">
-          No managers assigned. Only owners can see this property until you
-          assign one.
+          No managers assigned. Only owners can see this property until you assign one.
         </p>
       ) : (
-        <ul
-          aria-label="Assigned managers"
-          className="divide-y divide-slate-100 text-sm"
-        >
+        <ul aria-label="Assigned managers" className="divide-y divide-slate-100 text-sm">
           {managers.data.map((manager) => (
             <li
               key={manager.membership_id}
               className="flex items-center justify-between gap-3 py-2"
             >
               <span>
-                <span className="font-medium text-slate-900">
-                  {manager.full_name}
-                </span>{" "}
+                <span className="font-medium text-slate-900">{manager.full_name}</span>{" "}
                 <span className="text-slate-500">{manager.email}</span>
               </span>
               <Button
                 type="button"
                 variant="secondary"
                 aria-label={`Unassign ${manager.full_name}`}
-                pending={
-                  unassign.isPending &&
-                  unassign.variables === manager.membership_id
-                }
+                pending={unassign.isPending && unassign.variables === manager.membership_id}
                 onClick={() => unassign.mutate(manager.membership_id)}
               >
                 Unassign
@@ -106,9 +86,7 @@ export function ManagersSection({
             variant="secondary"
             disabled={selected === ""}
             pending={assign.isPending}
-            onClick={() =>
-              assign.mutate(selected, { onSuccess: () => setSelected("") })
-            }
+            onClick={() => assign.mutate(selected, { onSuccess: () => setSelected("") })}
           >
             Assign
           </Button>

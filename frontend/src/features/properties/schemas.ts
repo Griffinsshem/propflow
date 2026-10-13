@@ -12,15 +12,10 @@ import {
 } from "@/lib/api/properties";
 
 // Mirrors the API's rules (backend/app/properties/schemas.py); the API remains the authority.
-const optionalText = (max: number) =>
-  z.string().trim().max(max, `Use at most ${max} characters.`);
+const optionalText = (max: number) => z.string().trim().max(max, `Use at most ${max} characters.`);
 
 export const propertySchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "Enter a name.")
-    .max(200, "Use at most 200 characters."),
+  name: z.string().trim().min(1, "Enter a name.").max(200, "Use at most 200 characters."),
   property_type: z.enum(PROPERTY_TYPES),
   status: z.enum(PROPERTY_STATUSES),
   address_line: z
@@ -28,11 +23,7 @@ export const propertySchema = z.object({
     .trim()
     .min(1, "Enter an address.")
     .max(200, "Use at most 200 characters."),
-  city: z
-    .string()
-    .trim()
-    .min(1, "Enter a city.")
-    .max(100, "Use at most 100 characters."),
+  city: z.string().trim().min(1, "Enter a city.").max(100, "Use at most 100 characters."),
   region: optionalText(100),
   country_code: z
     .string()
@@ -92,16 +83,11 @@ export function toPropertyInput(values: PropertyFormValues): PropertyInput {
   };
 }
 
-export function toPropertyChanges(
-  changes: Partial<PropertyFormValues>,
-): PropertyChanges {
+export function toPropertyChanges(changes: Partial<PropertyFormValues>): PropertyChanges {
   const blankToNull = (key: string, value: unknown) =>
     (key === "region" || key === "description") && value === "" ? null : value;
   return Object.fromEntries(
-    Object.entries(changes).map(([key, value]) => [
-      key,
-      blankToNull(key, value),
-    ]),
+    Object.entries(changes).map(([key, value]) => [key, blankToNull(key, value)]),
   ) as PropertyChanges;
 }
 
@@ -114,11 +100,7 @@ const optionalInteger = (min: number, max: number, name: string) =>
     .nullable();
 
 export const unitSchema = z.object({
-  label: z
-    .string()
-    .trim()
-    .min(1, "Enter a label.")
-    .max(50, "Use at most 50 characters."),
+  label: z.string().trim().min(1, "Enter a label.").max(50, "Use at most 50 characters."),
   building_id: z.string(),
   floor: optionalInteger(-5, 300, "Floor"),
   bedrooms: optionalInteger(0, 50, "Bedrooms"),
@@ -127,13 +109,7 @@ export const unitSchema = z.object({
 
 export type UnitFormValues = z.infer<typeof unitSchema>;
 
-export const UNIT_FIELDS = [
-  "label",
-  "building_id",
-  "floor",
-  "bedrooms",
-  "status",
-] as const;
+export const UNIT_FIELDS = ["label", "building_id", "floor", "bedrooms", "status"] as const;
 
 export const EMPTY_UNIT: UnitFormValues = {
   label: "",
@@ -157,11 +133,7 @@ export function toUnitInput(values: UnitFormValues): UnitInput {
   return { ...values, building_id: values.building_id || null };
 }
 
-export function toUnitChanges(
-  changes: Partial<UnitFormValues>,
-): Partial<UnitInput> {
+export function toUnitChanges(changes: Partial<UnitFormValues>): Partial<UnitInput> {
   const { building_id: buildingId, ...rest } = changes;
-  return buildingId === undefined
-    ? rest
-    : { ...rest, building_id: buildingId || null };
+  return buildingId === undefined ? rest : { ...rest, building_id: buildingId || null };
 }

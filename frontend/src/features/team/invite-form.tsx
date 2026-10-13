@@ -43,14 +43,11 @@ export function InviteForm({
       setSentTo(values.email);
       reset({ email: "", role: values.role });
     } catch (error) {
-      const emailError =
-        error instanceof ApiError ? error.fieldErrors.email?.[0] : undefined;
+      const emailError = error instanceof ApiError ? error.fieldErrors.email?.[0] : undefined;
       if (emailError) {
         setError("email", { type: "server", message: emailError });
       } else if (error instanceof ApiError && error.status === 429) {
-        setFormError(
-          "You've sent many invitations recently. Please try again later.",
-        );
+        setFormError("You've sent many invitations recently. Please try again later.");
       } else {
         setFormError(messageOf(error));
       }
@@ -70,10 +67,7 @@ export function InviteForm({
           {...register("email")}
         />
         <div>
-          <label
-            htmlFor="invite-role"
-            className="block text-sm font-medium text-slate-900"
-          >
+          <label htmlFor="invite-role" className="block text-sm font-medium text-slate-900">
             Role
           </label>
           <select

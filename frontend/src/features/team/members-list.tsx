@@ -2,11 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { FormAlert } from "@/components/ui/form-alert";
-import {
-  useChangeMemberRole,
-  useDeactivateMember,
-  useMembers,
-} from "@/features/team/hooks";
+import { useChangeMemberRole, useDeactivateMember, useMembers } from "@/features/team/hooks";
 import { ROLE_LABELS } from "@/features/team/policy";
 import type { Role } from "@/lib/api/auth";
 import { messageOf } from "@/lib/api/errors";
@@ -25,8 +21,7 @@ export function MembersList({
   const deactivate = useDeactivateMember(organizationId);
   const failure = changeRole.error ?? deactivate.error;
 
-  if (members.isPending)
-    return <p className="text-sm text-slate-500">Loading…</p>;
+  if (members.isPending) return <p className="text-sm text-slate-500">Loading…</p>;
   if (members.isError) return <FormAlert>{messageOf(members.error)}</FormAlert>;
 
   return (
@@ -78,9 +73,7 @@ export function MembersList({
                     disabled={busy}
                     onClick={() => {
                       if (
-                        window.confirm(
-                          `Deactivate ${member.full_name}? They will lose access.`,
-                        )
+                        window.confirm(`Deactivate ${member.full_name}? They will lose access.`)
                       ) {
                         deactivate.mutate(member.id);
                       }

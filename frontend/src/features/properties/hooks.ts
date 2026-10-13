@@ -3,26 +3,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ApiError } from "@/lib/api/errors";
-import {
-  propertiesApi,
-  unitsApi,
-  type PropertyStatus,
-} from "@/lib/api/properties";
+import { propertiesApi, unitsApi, type PropertyStatus } from "@/lib/api/properties";
 
 const NONE = "none";
 
 export const propertyKeys = {
   lists: (orgId: string) => ["org", orgId, "properties"] as const,
-  list: (orgId: string, status: PropertyStatus) =>
-    ["org", orgId, "properties", status] as const,
-  detail: (orgId: string, id: string) =>
-    ["org", orgId, "property", id] as const,
-  buildings: (orgId: string, id: string) =>
-    ["org", orgId, "property", id, "buildings"] as const,
-  managers: (orgId: string, id: string) =>
-    ["org", orgId, "property", id, "managers"] as const,
-  units: (orgId: string, id: string) =>
-    ["org", orgId, "property", id, "units"] as const,
+  list: (orgId: string, status: PropertyStatus) => ["org", orgId, "properties", status] as const,
+  detail: (orgId: string, id: string) => ["org", orgId, "property", id] as const,
+  buildings: (orgId: string, id: string) => ["org", orgId, "property", id, "buildings"] as const,
+  managers: (orgId: string, id: string) => ["org", orgId, "property", id, "managers"] as const,
+  units: (orgId: string, id: string) => ["org", orgId, "property", id, "units"] as const,
   unit: (orgId: string, id: string) => ["org", orgId, "unit", id] as const,
 };
 
@@ -82,10 +73,7 @@ export function useCreateProperty(orgId: string) {
   return useMutation({
     mutationFn: propertiesApi.create,
     onSuccess: async (property) => {
-      queryClient.setQueryData(
-        propertyKeys.detail(orgId, property.id),
-        property,
-      );
+      queryClient.setQueryData(propertyKeys.detail(orgId, property.id), property);
       await queryClient.invalidateQueries({
         queryKey: propertyKeys.lists(orgId),
       });
@@ -98,10 +86,7 @@ export function useUpdateProperty(orgId: string) {
   return useMutation({
     mutationFn: propertiesApi.update,
     onSuccess: async (property) => {
-      queryClient.setQueryData(
-        propertyKeys.detail(orgId, property.id),
-        property,
-      );
+      queryClient.setQueryData(propertyKeys.detail(orgId, property.id), property);
       await queryClient.invalidateQueries({
         queryKey: propertyKeys.lists(orgId),
       });
@@ -112,8 +97,7 @@ export function useUpdateProperty(orgId: string) {
 export function useCreateBuilding(orgId: string, propertyId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) =>
-      propertiesApi.createBuilding({ propertyId, name }),
+    mutationFn: (name: string) => propertiesApi.createBuilding({ propertyId, name }),
     onSuccess: () =>
       queryClient.invalidateQueries({
         queryKey: propertyKeys.buildings(orgId, propertyId),
@@ -124,8 +108,7 @@ export function useCreateBuilding(orgId: string, propertyId: string) {
 export function useAssignManager(orgId: string, propertyId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (membershipId: string) =>
-      propertiesApi.assignManager({ propertyId, membershipId }),
+    mutationFn: (membershipId: string) => propertiesApi.assignManager({ propertyId, membershipId }),
     onSettled: () =>
       queryClient.invalidateQueries({
         queryKey: propertyKeys.managers(orgId, propertyId),

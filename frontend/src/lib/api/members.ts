@@ -15,10 +15,8 @@ export type Member = {
 const path = (id: string) => `/members/${encodeURIComponent(id)}`;
 
 export const membersApi = {
-  list: (signal?: AbortSignal) =>
-    apiRequest<Page<Member>>("/members?limit=100", { signal }),
+  list: (signal?: AbortSignal) => apiRequest<Page<Member>>("/members?limit=100", { signal }),
   changeRole: ({ id, role }: { id: string; role: Role }) =>
     apiRequest<Member>(path(id), { method: "PATCH", body: { role } }),
-  deactivate: (id: string) =>
-    apiRequest<Member>(`${path(id)}/deactivate`, { method: "POST" }),
+  deactivate: (id: string) => apiRequest<Member>(`${path(id)}/deactivate`, { method: "POST" }),
 };

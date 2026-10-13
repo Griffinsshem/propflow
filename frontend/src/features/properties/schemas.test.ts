@@ -39,15 +39,9 @@ describe("propertySchema", () => {
 describe("unitSchema", () => {
   it("accepts missing numbers and enforces the API's ranges", () => {
     const base = { label: "A1", building_id: "", status: "vacant" as const };
-    expect(
-      unitSchema.safeParse({ ...base, floor: null, bedrooms: null }).success,
-    ).toBe(true);
-    expect(
-      unitSchema.safeParse({ ...base, floor: 301, bedrooms: null }).success,
-    ).toBe(false);
-    expect(
-      unitSchema.safeParse({ ...base, floor: 1, bedrooms: 2.5 }).success,
-    ).toBe(false);
+    expect(unitSchema.safeParse({ ...base, floor: null, bedrooms: null }).success).toBe(true);
+    expect(unitSchema.safeParse({ ...base, floor: 301, bedrooms: null }).success).toBe(false);
+    expect(unitSchema.safeParse({ ...base, floor: 1, bedrooms: 2.5 }).success).toBe(false);
   });
 });
 

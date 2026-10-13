@@ -21,10 +21,7 @@ export default function PropertiesPage() {
   const [status, setStatus] = useState<PropertyStatus>("active");
   const properties = useProperties(membership?.organization_id ?? null, status);
 
-  if (!membership)
-    return (
-      <p className="text-sm text-slate-600">Select an organization first.</p>
-    );
+  if (!membership) return <p className="text-sm text-slate-600">Select an organization first.</p>;
   const isOwner = canManageProperties(membership.role);
 
   function emptyMessage(): string {
@@ -82,8 +79,7 @@ export default function PropertiesPage() {
               >
                 <p className="font-semibold text-slate-900">{property.name}</p>
                 <p className="mt-1 text-sm text-slate-600">
-                  {PROPERTY_TYPE_LABELS[property.property_type]} ·{" "}
-                  {property.city}
+                  {PROPERTY_TYPE_LABELS[property.property_type]} · {property.city}
                 </p>
               </Link>
             </li>

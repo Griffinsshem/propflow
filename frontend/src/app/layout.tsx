@@ -6,7 +6,11 @@ import { Providers } from "@/components/providers";
 
 import "./globals.css";
 
+// Absolute addresses for share images on every page: Vercel's production address, else local.
+const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+
 export const metadata: Metadata = {
+  metadataBase: new URL(productionHost ? `https://${productionHost}` : "http://localhost:3000"),
   title: { default: "PropFlow", template: "%s · PropFlow" },
   description: "Property operations: maintenance, work orders and tenants in one place.",
 };

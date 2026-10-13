@@ -14,11 +14,7 @@ type BuildingsSectionProps = {
   canEdit: boolean;
 };
 
-export function BuildingsSection({
-  orgId,
-  propertyId,
-  canEdit,
-}: BuildingsSectionProps) {
+export function BuildingsSection({ orgId, propertyId, canEdit }: BuildingsSectionProps) {
   const buildings = useBuildings(orgId, propertyId);
   const create = useCreateBuilding(orgId, propertyId);
   const [name, setName] = useState("");
@@ -40,10 +36,8 @@ export function BuildingsSection({
     }
   }
 
-  if (buildings.isPending)
-    return <p className="text-sm text-slate-500">Loading…</p>;
-  if (buildings.isError)
-    return <FormAlert>{messageOf(buildings.error)}</FormAlert>;
+  if (buildings.isPending) return <p className="text-sm text-slate-500">Loading…</p>;
+  if (buildings.isError) return <FormAlert>{messageOf(buildings.error)}</FormAlert>;
 
   return (
     <div className="space-y-4">
@@ -52,10 +46,7 @@ export function BuildingsSection({
           No buildings. Units can also belong directly to the property.
         </p>
       ) : (
-        <ul
-          aria-label="Buildings"
-          className="divide-y divide-slate-100 text-sm"
-        >
+        <ul aria-label="Buildings" className="divide-y divide-slate-100 text-sm">
           {buildings.data.map((building) => (
             <li key={building.id} className="py-2">
               {building.name}
@@ -64,11 +55,7 @@ export function BuildingsSection({
         </ul>
       )}
       {canEdit ? (
-        <form
-          onSubmit={add}
-          noValidate
-          className="flex flex-wrap items-end gap-3"
-        >
+        <form onSubmit={add} noValidate className="flex flex-wrap items-end gap-3">
           <TextField
             id="building-name"
             label="Building name"

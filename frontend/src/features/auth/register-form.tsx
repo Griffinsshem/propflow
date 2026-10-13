@@ -23,11 +23,7 @@ type RegisterFormProps = {
   showLoginLink?: boolean;
 };
 
-export function RegisterForm({
-  email,
-  onSuccess,
-  showLoginLink = true,
-}: RegisterFormProps) {
+export function RegisterForm({ email, onSuccess, showLoginLink = true }: RegisterFormProps) {
   const router = useRouter();
   const registerAccount = useRegister();
   const [formError, setFormError] = useState<string | null>(null);
@@ -55,9 +51,7 @@ export function RegisterForm({
         return;
       }
       if (error.status === 429) {
-        setFormError(
-          "Too many sign-up attempts from this network. Please try again later.",
-        );
+        setFormError("Too many sign-up attempts from this network. Please try again later.");
         return;
       }
       let placed = false;
@@ -76,7 +70,7 @@ export function RegisterForm({
   });
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-5">
+    <form method="post" onSubmit={onSubmit} noValidate className="space-y-5">
       {formError ? <FormAlert>{formError}</FormAlert> : null}
       <TextField
         id="full_name"
@@ -109,10 +103,7 @@ export function RegisterForm({
       {showLoginLink ? (
         <p className="text-center text-sm text-slate-600">
           Already have an account?{" "}
-          <Link
-            href="/login"
-            className="font-semibold text-indigo-600 hover:text-indigo-500"
-          >
+          <Link href="/login" className="font-semibold text-indigo-600 hover:text-indigo-500">
             Sign in
           </Link>
         </p>

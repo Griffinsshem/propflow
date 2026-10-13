@@ -12,8 +12,7 @@ export type Organization = {
 const path = (id: string) => `/organizations/${encodeURIComponent(id)}`;
 
 export const organizationsApi = {
-  get: (id: string, signal?: AbortSignal) =>
-    apiRequest<Organization>(path(id), { signal }),
+  get: (id: string, signal?: AbortSignal) => apiRequest<Organization>(path(id), { signal }),
   create: (name: string) =>
     apiRequest<Organization>("/organizations", {
       method: "POST",
@@ -21,6 +20,5 @@ export const organizationsApi = {
     }),
   rename: ({ id, name }: { id: string; name: string }) =>
     apiRequest<Organization>(path(id), { method: "PATCH", body: { name } }),
-  activate: (id: string) =>
-    apiRequest<Organization>(`${path(id)}/activate`, { method: "POST" }),
+  activate: (id: string) => apiRequest<Organization>(`${path(id)}/activate`, { method: "POST" }),
 };

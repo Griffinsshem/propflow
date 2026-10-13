@@ -8,16 +8,14 @@ export type FieldChange = { field: string; label: string; value: string };
 
 type Values = Record<string, unknown>;
 
-const show = (value: unknown) =>
-  value === null || value === "" ? "(empty)" : String(value);
+const show = (value: unknown) => (value === null || value === "" ? "(empty)" : String(value));
 
 /** The labelled fields whose value differs between two versions, in `labels` order. */
 export function changedFields<T extends Values>(
   before: T,
   after: T,
   labels: Partial<Record<keyof T & string, string>>,
-  format: (field: string, value: unknown) => string = (_field, value) =>
-    show(value),
+  format: (field: string, value: unknown) => string = (_field, value) => show(value),
 ): FieldChange[] {
   return Object.entries(labels).flatMap(([field, label]) =>
     label === undefined || before[field] === after[field]
@@ -36,11 +34,7 @@ export function diffValues<T extends Values>(values: T, base: T): Partial<T> {
 }
 
 /** Their latest version, keeping only the fields this user actually edited. */
-export function mergeKeepingMine<T extends Values>(
-  mine: T,
-  original: T,
-  latest: T,
-): T {
+export function mergeKeepingMine<T extends Values>(mine: T, original: T, latest: T): T {
   const merged = { ...latest };
   for (const key of Object.keys(mine) as (keyof T)[]) {
     if (mine[key] !== original[key]) merged[key] = mine[key];

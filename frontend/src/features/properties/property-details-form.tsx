@@ -19,12 +19,7 @@ import {
 } from "@/features/properties/schemas";
 import { messageOf } from "@/lib/api/errors";
 import { propertiesApi, type Property } from "@/lib/api/properties";
-import {
-  changedFields,
-  detectStaleConflict,
-  diffValues,
-  mergeKeepingMine,
-} from "@/lib/conflict";
+import { changedFields, detectStaleConflict, diffValues, mergeKeepingMine } from "@/lib/conflict";
 import { applyFieldErrors } from "@/lib/forms";
 
 const LABELS = {
@@ -38,13 +33,7 @@ const LABELS = {
   description: "Description",
 };
 
-export function PropertyDetailsForm({
-  orgId,
-  property,
-}: {
-  orgId: string;
-  property: Property;
-}) {
+export function PropertyDetailsForm({ orgId, property }: { orgId: string; property: Property }) {
   const queryClient = useQueryClient();
   const update = useUpdateProperty(orgId);
   // The version this form's edits are based on; replaced after every save or conflict choice.
@@ -89,17 +78,12 @@ export function PropertyDetailsForm({
       reset(propertyFormValues(updated));
       setNotice("Saved.");
     } catch (error) {
-      const latest = await detectStaleConflict(
-        error,
-        base.version,
-        fetchLatest,
-      ).catch(() => null);
+      const latest = await detectStaleConflict(error, base.version, fetchLatest).catch(() => null);
       if (latest) {
         setConflict(latest);
         return;
       }
-      if (!applyFieldErrors(error, setError, PROPERTY_FIELDS))
-        setFormError(messageOf(error));
+      if (!applyFieldErrors(error, setError, PROPERTY_FIELDS)) setFormError(messageOf(error));
     }
   });
 
@@ -112,13 +96,7 @@ export function PropertyDetailsForm({
 
   function keepMine() {
     if (!conflict) return;
-    reset(
-      mergeKeepingMine(
-        getValues(),
-        propertyFormValues(base),
-        propertyFormValues(conflict),
-      ),
-    );
+    reset(mergeKeepingMine(getValues(), propertyFormValues(base), propertyFormValues(conflict)));
     setBase(conflict);
     setConflict(null);
   }
@@ -128,11 +106,7 @@ export function PropertyDetailsForm({
       {conflict ? (
         <ConflictNotice
           what="property"
-          changes={changedFields(
-            propertyFormValues(base),
-            propertyFormValues(conflict),
-            LABELS,
-          )}
+          changes={changedFields(propertyFormValues(base), propertyFormValues(conflict), LABELS)}
           onUseTheirs={takeTheirs}
           onKeepMine={keepMine}
         />
@@ -140,11 +114,7 @@ export function PropertyDetailsForm({
       {formError ? <FormAlert>{formError}</FormAlert> : null}
       <PropertyFields register={register} errors={errors} showStatus />
       <div className="flex items-center gap-3">
-        <Button
-          type="submit"
-          pending={isSubmitting}
-          disabled={conflict !== null}
-        >
+        <Button type="submit" pending={isSubmitting} disabled={conflict !== null}>
           {isSubmitting ? "Saving…" : "Save details"}
         </Button>
         <p role="status" className="text-sm text-green-700">

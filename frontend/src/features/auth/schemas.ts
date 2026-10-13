@@ -10,18 +10,11 @@ const email = z
 
 export const loginSchema = z.object({
   email,
-  password: z
-    .string()
-    .min(1, "Enter your password.")
-    .max(128, "Use at most 128 characters."),
+  password: z.string().min(1, "Enter your password.").max(128, "Use at most 128 characters."),
 });
 
 export const registerSchema = z.object({
-  full_name: z
-    .string()
-    .trim()
-    .min(1, "Enter your name.")
-    .max(200, "Use at most 200 characters."),
+  full_name: z.string().trim().min(1, "Enter your name.").max(200, "Use at most 200 characters."),
   email,
   password: z
     .string()

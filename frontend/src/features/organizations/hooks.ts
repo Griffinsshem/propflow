@@ -21,8 +21,7 @@ export function useCreateOrganization() {
   return useMutation({
     mutationFn: organizationsApi.create,
     // The API also switches the session to the new organization.
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: CURRENT_USER_KEY }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: CURRENT_USER_KEY }),
   });
 }
 

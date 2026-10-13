@@ -2,12 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/api/errors";
 
-import {
-  changedFields,
-  detectStaleConflict,
-  diffValues,
-  mergeKeepingMine,
-} from "./conflict";
+import { changedFields, detectStaleConflict, diffValues, mergeKeepingMine } from "./conflict";
 
 const original = { name: "Court", city: "Nairobi", region: "" };
 
@@ -35,12 +30,10 @@ describe("mergeKeepingMine", () => {
 describe("changedFields", () => {
   it("lists their changes with labels, showing empty values explicitly", () => {
     const latest = { ...original, city: "Mombasa", region: "" };
-    expect(
-      changedFields(original, latest, { name: "Name", city: "City" }),
-    ).toEqual([{ field: "city", label: "City", value: "Mombasa" }]);
-    expect(
-      changedFields(latest, original, { city: "City", region: "Region" })[0],
-    ).toMatchObject({
+    expect(changedFields(original, latest, { name: "Name", city: "City" })).toEqual([
+      { field: "city", label: "City", value: "Mombasa" },
+    ]);
+    expect(changedFields(latest, original, { city: "City", region: "Region" })[0]).toMatchObject({
       label: "City",
       value: "Nairobi",
     });
@@ -52,9 +45,7 @@ describe("detectStaleConflict", () => {
 
   it("returns the latest version when someone else saved first", async () => {
     const latest = { version: 3 };
-    await expect(
-      detectStaleConflict(conflict, 2, async () => latest),
-    ).resolves.toBe(latest);
+    await expect(detectStaleConflict(conflict, 2, async () => latest)).resolves.toBe(latest);
   });
 
   it("is not a stale conflict when the version did not move (e.g. a duplicate)", async () => {
@@ -65,9 +56,7 @@ describe("detectStaleConflict", () => {
 
   it("ignores other errors without fetching", async () => {
     const fetchLatest = vi.fn();
-    await expect(
-      detectStaleConflict(new Error("x"), 2, fetchLatest),
-    ).resolves.toBeNull();
+    await expect(detectStaleConflict(new Error("x"), 2, fetchLatest)).resolves.toBeNull();
     expect(fetchLatest).not.toHaveBeenCalled();
   });
 });

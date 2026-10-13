@@ -4,9 +4,7 @@ import { ApiError } from "./errors";
 const CSRF_COOKIES = ["__Host-propflow_csrf", "propflow_csrf"];
 const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-export function readCsrfToken(
-  cookies = typeof document === "undefined" ? "" : document.cookie,
-) {
+export function readCsrfToken(cookies = typeof document === "undefined" ? "" : document.cookie) {
   for (const part of cookies.split(";")) {
     const [name, ...value] = part.trim().split("=");
     if (CSRF_COOKIES.includes(name)) return decodeURIComponent(value.join("="));
@@ -38,19 +36,14 @@ export async function apiRequest<T>(
       signal,
     });
   } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError")
-      throw error;
+    if (error instanceof DOMException && error.name === "AbortError") throw error;
     throw ApiError.network();
   }
 
   if (response.status === 204) return undefined as T;
   const payload: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    throw ApiError.fromResponse(
-      response.status,
-      payload,
-      response.headers.get("x-request-id"),
-    );
+    throw ApiError.fromResponse(response.status, payload, response.headers.get("x-request-id"));
   }
   return payload as T;
 }

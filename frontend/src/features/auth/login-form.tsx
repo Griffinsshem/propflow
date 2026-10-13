@@ -65,7 +65,7 @@ export function LoginForm({
   });
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-5">
+    <form method="post" onSubmit={onSubmit} noValidate className="space-y-5">
       {formError ? <FormAlert>{formError}</FormAlert> : null}
       <TextField
         id="email"

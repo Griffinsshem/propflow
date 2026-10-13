@@ -4,12 +4,7 @@ import { invitableRoles } from "./policy";
 
 describe("invitableRoles", () => {
   it("lets owners invite every role", () => {
-    expect(invitableRoles("owner")).toEqual([
-      "manager",
-      "contractor",
-      "tenant",
-      "owner",
-    ]);
+    expect(invitableRoles("owner")).toEqual(["manager", "contractor", "tenant", "owner"]);
   });
 
   it("limits managers to tenants and contractors", () => {

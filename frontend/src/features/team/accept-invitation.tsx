@@ -105,8 +105,8 @@ export function AcceptInvitation() {
     return (
       <Card title="Invitation unavailable">
         <p className="text-sm text-slate-600">
-          This invitation is invalid or has expired. Ask the person who invited
-          you to send a new one.
+          This invitation is invalid or has expired. Ask the person who invited you to send a new
+          one.
         </p>
       </Card>
     );
@@ -121,14 +121,12 @@ export function AcceptInvitation() {
     );
   }
   const user = me.data;
-  const sameAddress =
-    user?.email.toLowerCase() === invitation.email.toLowerCase();
+  const sameAddress = user?.email.toLowerCase() === invitation.email.toLowerCase();
 
   return (
     <Card title={`Join ${invitation.organization_name}`}>
       <p className="text-sm text-slate-600">
-        You&apos;ve been invited as{" "}
-        <strong>{ROLE_LABELS[invitation.role]}</strong> using{" "}
+        You&apos;ve been invited as <strong>{ROLE_LABELS[invitation.role]}</strong> using{" "}
         <strong>{invitation.email}</strong>.
       </p>
       {acceptError ? <FormAlert>{acceptError}</FormAlert> : null}
@@ -136,19 +134,13 @@ export function AcceptInvitation() {
       {me.isPending ? (
         <p className="text-sm text-slate-500">Checking your session…</p>
       ) : user && sameAddress ? (
-        <Button
-          type="button"
-          className="w-full"
-          pending={accepting}
-          onClick={accept}
-        >
+        <Button type="button" className="w-full" pending={accepting} onClick={accept}>
           {accepting ? "Joining…" : "Accept invitation"}
         </Button>
       ) : user ? (
         <div className="space-y-4">
           <p className="text-sm text-slate-600">
-            You&apos;re signed in as {user.email}. This invitation is for{" "}
-            {invitation.email}.
+            You&apos;re signed in as {user.email}. This invitation is for {invitation.email}.
           </p>
           <Button
             type="button"
@@ -162,11 +154,7 @@ export function AcceptInvitation() {
         </div>
       ) : mode === "register" ? (
         <div className="space-y-4">
-          <RegisterForm
-            email={invitation.email}
-            onSuccess={accept}
-            showLoginLink={false}
-          />
+          <RegisterForm email={invitation.email} onSuccess={accept} showLoginLink={false} />
           <button
             type="button"
             className="w-full text-center text-sm font-semibold text-indigo-600 hover:text-indigo-500"
@@ -177,11 +165,7 @@ export function AcceptInvitation() {
         </div>
       ) : (
         <div className="space-y-4">
-          <LoginForm
-            email={invitation.email}
-            onSuccess={accept}
-            showRegisterLink={false}
-          />
+          <LoginForm email={invitation.email} onSuccess={accept} showRegisterLink={false} />
           <button
             type="button"
             className="w-full text-center text-sm font-semibold text-indigo-600 hover:text-indigo-500"

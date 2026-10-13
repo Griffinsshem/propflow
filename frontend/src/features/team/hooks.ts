@@ -6,8 +6,7 @@ import { CURRENT_USER_KEY } from "@/features/auth/hooks";
 import { invitationsApi } from "@/lib/api/invitations";
 import { membersApi } from "@/lib/api/members";
 
-export const invitationsKey = (orgId: string) =>
-  ["org", orgId, "invitations"] as const;
+export const invitationsKey = (orgId: string) => ["org", orgId, "invitations"] as const;
 export const membersKey = (orgId: string) => ["org", orgId, "members"] as const;
 
 export function usePendingInvitations(orgId: string) {
@@ -21,8 +20,7 @@ export function useCreateInvitation(orgId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: invitationsApi.create,
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: invitationsKey(orgId) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: invitationsKey(orgId) }),
   });
 }
 
@@ -30,8 +28,7 @@ export function useRevokeInvitation(orgId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: invitationsApi.revoke,
-    onSettled: () =>
-      queryClient.invalidateQueries({ queryKey: invitationsKey(orgId) }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: invitationsKey(orgId) }),
   });
 }
 
@@ -42,10 +39,7 @@ export function useMembers(orgId: string) {
   });
 }
 
-function useMemberMutation<T>(
-  orgId: string,
-  mutationFn: (input: T) => Promise<unknown>,
-) {
+function useMemberMutation<T>(orgId: string, mutationFn: (input: T) => Promise<unknown>) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn,

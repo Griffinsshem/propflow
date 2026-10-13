@@ -3,12 +3,9 @@ import { describe, expect, it } from "vitest";
 import { safeNextPath } from "./redirect";
 
 describe("safeNextPath", () => {
-  it.each(["/dashboard", "/maintenance/123?tab=history"])(
-    "accepts local path %s",
-    (path) => {
-      expect(safeNextPath(path)).toBe(path);
-    },
-  );
+  it.each(["/dashboard", "/maintenance/123?tab=history"])("accepts local path %s", (path) => {
+    expect(safeNextPath(path)).toBe(path);
+  });
 
   it.each([
     undefined,

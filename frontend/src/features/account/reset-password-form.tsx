@@ -91,7 +91,7 @@ export function ResetPasswordForm() {
 
   return (
     <AuthCard title="Choose a new password">
-      <form onSubmit={onSubmit} noValidate className="space-y-5">
+      <form method="post" onSubmit={onSubmit} noValidate className="space-y-5">
         {formError ? <FormAlert>{formError}</FormAlert> : null}
         <TextField
           id="new-password"

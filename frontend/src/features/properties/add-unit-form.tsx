@@ -25,11 +25,7 @@ type AddUnitFormProps = {
   buildings: Building[];
 };
 
-export function AddUnitForm({
-  orgId,
-  propertyId,
-  buildings,
-}: AddUnitFormProps) {
+export function AddUnitForm({ orgId, propertyId, buildings }: AddUnitFormProps) {
   const create = useCreateUnit(orgId, propertyId);
   const [added, setAdded] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -55,17 +51,12 @@ export function AddUnitForm({
       setAdded(unit.label);
       reset({ ...EMPTY_UNIT, building_id: values.building_id });
     } catch (error) {
-      if (!applyFieldErrors(error, setError, UNIT_FIELDS))
-        setFormError(messageOf(error));
+      if (!applyFieldErrors(error, setError, UNIT_FIELDS)) setFormError(messageOf(error));
     }
   });
 
   return (
-    <form
-      onSubmit={onSubmit}
-      noValidate
-      className="space-y-4 border-t border-slate-100 pt-4"
-    >
+    <form onSubmit={onSubmit} noValidate className="space-y-4 border-t border-slate-100 pt-4">
       <h3 className="text-sm font-semibold text-slate-900">Add a unit</h3>
       {formError ? <FormAlert>{formError}</FormAlert> : null}
       <UnitFields register={register} errors={errors} buildings={buildings} />

@@ -11,8 +11,7 @@ function jsonResponse(status: number, body: unknown): Response {
 }
 
 afterEach(() => {
-  document.cookie =
-    "propflow_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+  document.cookie = "propflow_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
 });
 
 describe("apiRequest", () => {
@@ -25,9 +24,7 @@ describe("apiRequest", () => {
     await apiRequest("/auth/me");
 
     const calls = fetchMock.mock.calls as unknown as [string, RequestInit][];
-    expect(new Headers(calls[0][1].headers).get("X-CSRF-Token")).toBe(
-      "token-123",
-    );
+    expect(new Headers(calls[0][1].headers).get("X-CSRF-Token")).toBe("token-123");
     expect(new Headers(calls[1][1].headers).get("X-CSRF-Token")).toBeNull();
     expect(calls[0][0]).toBe("/api/v1/auth/logout");
   });
@@ -77,8 +74,6 @@ describe("apiRequest", () => {
       "fetch",
       vi.fn(async () => new Response(null, { status: 204 })),
     );
-    await expect(
-      apiRequest("/auth/logout", { method: "POST" }),
-    ).resolves.toBeUndefined();
+    await expect(apiRequest("/auth/logout", { method: "POST" })).resolves.toBeUndefined();
   });
 });

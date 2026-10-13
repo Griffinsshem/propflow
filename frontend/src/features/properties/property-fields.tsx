@@ -5,10 +5,7 @@ import type { FieldErrors, UseFormRegister } from "react-hook-form";
 import { SelectField } from "@/components/ui/select-field";
 import { TextAreaField } from "@/components/ui/textarea-field";
 import { TextField } from "@/components/ui/text-field";
-import {
-  PROPERTY_STATUS_OPTIONS,
-  PROPERTY_TYPE_OPTIONS,
-} from "@/features/properties/labels";
+import { PROPERTY_STATUS_OPTIONS, PROPERTY_TYPE_OPTIONS } from "@/features/properties/labels";
 import type { PropertyFormValues } from "@/features/properties/schemas";
 
 type PropertyFieldsProps = {
@@ -17,11 +14,7 @@ type PropertyFieldsProps = {
   showStatus: boolean;
 };
 
-export function PropertyFields({
-  register,
-  errors,
-  showStatus,
-}: PropertyFieldsProps) {
+export function PropertyFields({ register, errors, showStatus }: PropertyFieldsProps) {
   return (
     <div className="grid gap-5 sm:grid-cols-2">
       <TextField
