@@ -25,6 +25,8 @@ services:
         value: wsgi:app
       - key: BACKGROUND_TASKS
         value: sync # no worker on the free plan: email and photo processing run in the request
+      - key: GUNICORN_CMD_ARGS
+        value: "--log-level=info" # replaces Render's default, which adds a second access log
       - key: WEB_CONCURRENCY
         value: "2" # two processes in 512 MB, so one slow email or photo does not block everyone
       - key: GUNICORN_TIMEOUT

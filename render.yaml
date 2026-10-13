@@ -48,6 +48,8 @@ services:
     numInstances: 1
     envVars:
       - fromGroup: propflow-shared
+      - key: GUNICORN_CMD_ARGS
+        value: "--log-level=info" # replaces Render's default, which adds a second access log
       - key: WEB_CONCURRENCY
         value: "2" # 2 x vCPU; change together with the plan
       - key: DATABASE_URL

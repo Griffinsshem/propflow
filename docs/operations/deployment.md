@@ -143,3 +143,29 @@ Order matters, because the API only accepts requests from the frontend's exact a
 4. R2: add the Vercel address to the bucket's CORS `AllowedOrigins`.
 5. Verify: `/health` on Render, sign-up with a real email, an invitation, a password reset,
    a photo upload, the client-IP check, and a phone-sized pass.
+
+### Free deployment: verification record (October 2026)
+
+Frontend `https://propflow-omega-tawny.vercel.app`, API `https://propflow-api-8y0d.onrender.com`.
+
+| Check | Result |
+|---|---|
+| `/health`, and a direct API call without the proxy secret | 200, and 403 |
+| Sign-up, verification email, verify link | Delivered to the inbox; verified |
+| Invitation (tenant), accept, home shown | Delivered (Gmail sorted it into Promotions) |
+| Password reset | Delivered; new password works |
+| Photo upload to R2 | Uploaded, processed in the request, displayed |
+| Owner notified of a tenant's report | Yes |
+| Phone view (360 px) | Header, menu and pages fit |
+| Client IP | First recorded Cloudflare edges; fixed by ADR 0020; now the visitor's IP |
+
+**Checking the client IP without Render's Shell** (a paid feature): sign in on the live site,
+then read the newest `user_sessions.ip_address` from Neon from your own machine, and compare
+it with `curl -4 ifconfig.me`. Never trust a hop count again (ADR 0020).
+
+**Email delivery:** without a domain of our own, Brevo sends from `…@brevosend.com`; Gmail may
+file invitations under Promotions or Spam. Authenticating a domain in Brevo fixes this.
+
+**Known free-plan limits** (ADR 0019): the API sleeps after 15 idle minutes (first request
+waits up to a minute); email and photo processing run inside the request; housekeeping jobs
+(expired sessions, abandoned uploads, old notifications) do not run.
