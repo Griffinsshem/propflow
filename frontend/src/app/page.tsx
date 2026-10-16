@@ -34,7 +34,7 @@ export const metadata: Metadata = {
 };
 
 // Set to the GitHub address once the repository is public; until then, no link (it would 404).
-const REPOSITORY_URL: string | null = null;
+const REPOSITORY_URL: string | null = "https://github.com/Griffinsshem/propflow";
 
 const primary =
   "inline-flex items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600";
