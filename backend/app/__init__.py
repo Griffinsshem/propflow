@@ -71,6 +71,9 @@ def create_app(app_env: str | None = None, overrides: Mapping[str, Any] | None =
     limiter.exempt(health_bp)
 
     app.register_blueprint(health_bp)
+    from app.housekeeping.cli import cli as housekeeping_cli
+
+    app.cli.add_command(housekeeping_cli)
     register_v1(api)
     # Must come after Api(app) so these handlers replace flask-smorest's defaults.
     register_error_handlers(app)

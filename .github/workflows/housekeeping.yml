@@ -1,0 +1,41 @@
+# Hourly clean-up for the free plan, which has no scheduler (ADR 0019, ADR 0021):
+# expired demo sandboxes, expired sessions and old notifications, deleted from Neon.
+name: Housekeeping
+
+on:
+  schedule:
+    - cron: "17 * * * *" # every hour, off the busy top of the hour
+  workflow_dispatch: # run it by hand from the Actions tab, or: gh workflow run housekeeping.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: housekeeping
+  cancel-in-progress: false
+
+jobs:
+  hourly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: backend/.python-version
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install
+        run: pip install -r requirements.txt
+      - name: Purge expired demos, sessions and old notifications
+        env:
+          # Database work only: no email, storage or tokens are used, so the development
+          # configuration suffices. The key is generated per run and never reused.
+          APP_ENV: development
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          export SECRET_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
+          flask housekeeping hourly

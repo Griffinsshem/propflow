@@ -177,3 +177,16 @@ def test_purge_leaves_no_trace_and_refuses_real_organizations(app: Flask) -> Non
         assert real_session.active_organization_id is not None
         with pytest.raises(RuntimeError):
             demo.purge_sandbox(real_session.active_organization_id)
+
+
+def test_the_hourly_job_purges_expired_sandboxes(app: Flask) -> None:
+    with app.test_request_context("/"):
+        organization, _, _ = _sandbox()
+        organization_id = organization.id
+        organization.demo_expires_at = datetime.now(UTC) - timedelta(minutes=1)
+        db.session.commit()
+    result = app.test_cli_runner().invoke(args=["housekeeping", "hourly"])
+    assert result.exit_code == 0, result.output
+    assert "demo sandboxes purged:" in result.output
+    with app.app_context():
+        assert db.session.get(Organization, organization_id) is None
