@@ -7,6 +7,7 @@ from datetime import datetime
 from enum import StrEnum
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -44,11 +45,16 @@ class MembershipStatus(StrEnum):
 class Organization(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "organizations"
     __table_args__ = (
+        # Matches migration 7c1d2e3f4a5b: the purge scans expired demos only (ADR 0021).
+        Index("ix_organizations_demo_expiry", "demo_expires_at", postgresql_where=text("is_demo")),
         CheckConstraint("char_length(btrim(name)) > 0", name="name_not_blank"),
         CheckConstraint(enum_values_check("status", OrganizationStatus), name="status_valid"),
     )
 
     name: Mapped[str] = mapped_column(String(200))
+    # A visitor's private demo sandbox (ADR 0021), deleted after demo_expires_at.
+    is_demo: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    demo_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(
         String(20), default=OrganizationStatus.ACTIVE, server_default=OrganizationStatus.ACTIVE
     )

@@ -38,6 +38,8 @@ class CurrentUserSchema(Schema):
     full_name = fields.String()
     email_verified = fields.Boolean()
     active_organization_id = fields.UUID(allow_none=True)
+    is_demo = fields.Boolean()
+    demo_expires_at = fields.DateTime(allow_none=True)
     memberships = fields.List(fields.Nested(MembershipSummarySchema))
 
 

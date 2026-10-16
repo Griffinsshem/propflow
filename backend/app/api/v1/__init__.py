@@ -6,6 +6,7 @@ from app.audit.routes import blp as audit_blp
 from app.auth.routes import blp as auth_blp
 from app.contractors.routes import blp as contractors_blp
 from app.dashboards.routes import blp as dashboards_blp
+from app.demo.routes import blp as demo_blp
 from app.maintenance.attachment_routes import blp as maintenance_attachments_blp
 from app.maintenance.routes import blp as maintenance_blp
 from app.notifications.routes import blp as notifications_blp
@@ -20,6 +21,7 @@ from app.work_orders.routes import blp as work_orders_blp
 def register_v1(api: Api) -> None:
     for blueprint in (
         auth_blp,
+        demo_blp,
         organizations_blp,
         invitations_blp,
         members_blp,

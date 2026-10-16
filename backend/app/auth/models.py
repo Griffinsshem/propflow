@@ -25,6 +25,8 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # A person inside a demo sandbox (ADR 0021): never emailed, never audited.
+    is_demo: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
 
     def __repr__(self) -> str:
         # Deliberately excludes email and password hash: reprs end up in logs.

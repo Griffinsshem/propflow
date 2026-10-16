@@ -118,3 +118,10 @@ class InvitationEmailMismatchError(AppError):
     status_code = 403
     code = "INVITATION_EMAIL_MISMATCH"
     message = "This invitation was sent to a different email address. Sign in with that address."
+
+
+class DemoRestrictedError(PermissionDeniedError):
+    """Refused inside a demo sandbox (ADR 0021)."""
+
+    code = "DEMO_RESTRICTED"
+    message = "This isn't available in the demo. Create a free account to use it."

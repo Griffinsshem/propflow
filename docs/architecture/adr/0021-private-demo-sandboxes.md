@@ -1,7 +1,7 @@
 # ADR 0021: A private demo sandbox per visitor
 
 ## Status
-Proposed. Implementation follows review.
+Accepted. Backend implemented; frontend follows.
 
 ## Context
 The landing page should let anyone try PropFlow without registering. Shared demo accounts

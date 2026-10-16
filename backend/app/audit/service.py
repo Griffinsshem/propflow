@@ -32,10 +32,12 @@ def record(
     organization_id: uuid.UUID | None = None,
     actor_user_id: uuid.UUID | None = None,
     details: dict[str, Any] | None = None,
-) -> AuditLog:
+) -> AuditLog | None:
     if actor_user_id is None:
         user = g.get("current_user")
         actor_user_id = user.id if user is not None else None
+    if _is_demo_activity(organization_id, actor_user_id):
+        return None  # demo sandboxes must stay deletable (ADR 0021)
     entry = AuditLog(
         organization_id=organization_id,
         actor_user_id=actor_user_id,
@@ -57,3 +59,17 @@ def list_for_organization(
     return paginate(
         stmt, created_column=AuditLog.created_at, id_column=AuditLog.id, limit=limit, cursor=cursor
     )
+
+
+def _is_demo_activity(organization_id: uuid.UUID | None, actor_user_id: uuid.UUID | None) -> bool:
+    from app.auth.models import User  # local: avoids an import cycle through auth
+    from app.demo.guards import is_demo_organization
+
+    if is_demo_organization(organization_id):
+        return True
+    if actor_user_id is None:
+        return False
+    current = g.get("current_user")
+    actor = current if current is not None and current.id == actor_user_id else None
+    actor = actor or db.session.get(User, actor_user_id)
+    return actor is not None and actor.is_demo

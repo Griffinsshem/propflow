@@ -129,6 +129,11 @@ def deliver_now(message: EmailMessage) -> None:
 
 def send_email(message: EmailMessage) -> None:
     """Callers invoke this only after their transaction has committed."""
+    from app.demo import guards  # local import, like the others here
+
+    if guards.is_demo_address(message.to):
+        guards.log_suppressed_email(message.subject)
+        return
     from app.notifications import tasks  # local imports: both modules import this one
     from app.worker import dispatch
 

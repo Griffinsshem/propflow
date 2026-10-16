@@ -9,7 +9,7 @@ from app.audit import service as audit
 from app.auth import repository as auth_repository
 from app.auth.models import User, UserSession
 from app.authz.permissions import Permission, has_permission
-from app.common.errors import NotFoundError, PermissionDeniedError
+from app.common.errors import DemoRestrictedError, NotFoundError, PermissionDeniedError
 from app.extensions import db
 from app.organizations import repository
 from app.organizations.models import MembershipRole, Organization, OrganizationMembership
@@ -49,6 +49,8 @@ def list_for_user(user_id: uuid.UUID) -> list[dict[str, Any]]:
 
 def create(user: User, session: UserSession | None, name: str) -> dict[str, Any]:
     """Org + owner membership + session switch + audit entry: one transaction."""
+    if user.is_demo:
+        raise DemoRestrictedError()
     org = Organization(name=name.strip())
     db.session.add(org)
     db.session.flush()

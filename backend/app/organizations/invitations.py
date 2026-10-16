@@ -25,6 +25,7 @@ from app.common.links import frontend_link
 from app.common.pagination import paginate
 from app.contractors import repository as contractors_repository
 from app.contractors import service as contractors_service
+from app.demo.guards import ensure_not_demo
 from app.extensions import db
 from app.notifications.email import EmailMessage, send_email
 from app.organizations import repository
@@ -56,6 +57,7 @@ def create(
     unit_id: uuid.UUID | None = None,
     contractor_id: uuid.UUID | None = None,
 ) -> Invitation:
+    ensure_not_demo(context.organization_id)
     target_role = MembershipRole(role)
     if not can_invite(context.role, target_role):
         raise PermissionDeniedError()

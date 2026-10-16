@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -150,8 +150,28 @@ def profile(user: User, session: UserSession | None) -> dict[str, Any]:
         "full_name": user.full_name,
         "email_verified": user.email_verified_at is not None,
         "active_organization_id": session.active_organization_id if session else None,
+        "is_demo": user.is_demo,
+        "demo_expires_at": next(
+            (org.demo_expires_at for _, org in memberships if org.is_demo), None
+        ),
         "memberships": [
             {"organization_id": org.id, "organization_name": org.name, "role": membership.role}
             for membership, org in memberships
         ],
     }
+
+
+def start_session(
+    user: User,
+    *,
+    ip_address: str | None,
+    user_agent: str | None,
+    expires_at: datetime | None = None,
+) -> IssuedSession:
+    """For other modules (the demo, ADR 0021): optionally ends sooner than the usual timeout."""
+    issued = _start_session(user, ip_address=ip_address, user_agent=user_agent)
+    if expires_at is not None and expires_at < issued.session.expires_at:
+        issued.session.expires_at = expires_at
+        remaining = int((expires_at - issued.session.created_at).total_seconds())
+        issued = replace(issued, max_age_seconds=max(remaining, 0))
+    return issued

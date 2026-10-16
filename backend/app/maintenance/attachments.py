@@ -18,6 +18,7 @@ from app.audit import service as audit
 from app.authz.context import OrgContext
 from app.common.errors import ConflictError, NotFoundError
 from app.common.storage import get_storage
+from app.demo.guards import ensure_not_demo
 from app.extensions import db
 from app.maintenance import images, repository
 from app.maintenance.models import (
@@ -89,6 +90,7 @@ def _active_count(organization_id: uuid.UUID, request_id: uuid.UUID) -> int:
 def start_upload(
     context: OrgContext, request_id: uuid.UUID, *, content_type: str, size_bytes: int
 ) -> dict[str, Any]:
+    ensure_not_demo(context.organization_id)
     request = _visible_request(context, request_id)
     if request.status == MaintenanceStatus.CLOSED:
         raise ConflictError("Closed requests cannot receive new attachments.")
