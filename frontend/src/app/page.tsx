@@ -18,6 +18,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 
+import { StartDemoButton } from "@/features/demo/start-demo-button";
 import { ProductPreview } from "@/features/landing/product-preview";
 import { WakeApi } from "@/features/landing/wake-api";
 
@@ -39,6 +40,9 @@ const primary =
   "inline-flex items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600";
 const secondary =
   "inline-flex items-center justify-center gap-2 rounded-md bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-slate-300 hover:bg-slate-50";
+
+const demo =
+  "inline-flex items-center justify-center gap-2 rounded-md bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-100";
 
 const STEPS = [
   {
@@ -209,10 +213,10 @@ export default async function LandingPage() {
             <p className="mt-5 text-lg text-slate-600">{DESCRIPTION}</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Actions signedIn={signedIn} large />
-              {/* Live demo: a "Try the live demo" button joins these once demo accounts exist. */}
+              {signedIn ? null : <StartDemoButton className={demo + " px-5 py-3 text-base"} />}
             </div>
             <p className="mt-4 text-sm text-slate-500">
-              Free to try. Works in any browser, on any phone.
+              Free to try. The live demo needs no account and is yours alone.
             </p>
           </div>
           <ProductPreview />

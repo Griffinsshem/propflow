@@ -13,6 +13,10 @@ export type CurrentUser = {
   email: string;
   full_name: string;
   email_verified: boolean;
+  /** Inside a private demo sandbox (ADR 0021). */
+  is_demo?: boolean;
+  /** When the sandbox is deleted; null outside a demo. */
+  demo_expires_at?: string | null;
   active_organization_id: string | null;
   memberships: Membership[];
 };

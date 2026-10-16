@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 
 
 import { Button } from "@/components/ui/button";
 import { useLogout } from "@/features/auth/hooks";
+import { DemoBanner } from "@/features/demo/demo-banner";
 import { navFor, type NavItem } from "@/features/navigation/nav";
 import { NotificationBell } from "@/features/notifications/notification-bell";
 import { activeMembership } from "@/features/organizations/membership";
@@ -196,6 +197,7 @@ export function AppShell({ user, children }: { user: CurrentUser; children: Reac
           </div>
         </div>
       </header>
+      {user.is_demo ? <DemoBanner user={user} /> : null}
       {menuOpen ? (
         <MobileMenu user={user} items={items} pathname={pathname} onClose={closeMenu} />
       ) : null}
