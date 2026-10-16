@@ -15,7 +15,7 @@ test("a visitor explores a private demo, as each person in it", async ({ page })
 
   await banner.getByLabel("View as").selectOption("tenant");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Welcome, Tom");
-  await expect(page.getByText("Riverside Court · Unit A1")).toBeVisible();
+  await expect(page.getByText("Riverside Court · Unit A1", { exact: true })).toBeVisible();
 
   await page.getByRole("region", { name: "Demo" }).getByLabel("View as").selectOption("contractor");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Welcome, Fred");
