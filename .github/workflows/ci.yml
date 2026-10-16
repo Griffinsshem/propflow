@@ -82,6 +82,8 @@ jobs:
         run: npm ci
       - name: Lint
         run: npm run lint
+      - name: Formatting
+        run: npm run format:check
       - name: Unit tests
         run: npm run test
       - name: Notification links cover every resource type
