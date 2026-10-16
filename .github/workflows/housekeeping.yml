@@ -35,6 +35,12 @@ jobs:
           # Database work only: no email, storage or tokens are used, so the development
           # configuration suffices. The key is generated per run and never reused.
           APP_ENV: development
+          # Exactly the settings tested locally with no .env: the job needs only the database.
+          STORAGE_BACKEND: local # never used here: no storage keys in this job
+          LOCAL_STORAGE_DIR: /tmp/propflow-storage
+          EMAIL_BACKEND: disabled # nothing can be sent from this job
+          REDIS_URL: redis://127.0.0.1:1/0 # required by the configuration, never contacted
+          BACKGROUND_TASKS: sync
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           export SECRET_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
