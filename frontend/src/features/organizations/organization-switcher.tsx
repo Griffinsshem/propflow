@@ -35,12 +35,14 @@ export function OrganizationSwitcher({ user }: { user: CurrentUser }) {
           </option>
         ))}
       </select>
-      <Link
-        href="/organizations/new"
-        className="whitespace-nowrap text-sm font-semibold text-indigo-600 hover:text-indigo-500"
-      >
-        New organization
-      </Link>
+      {user.is_demo ? null : ( // a demo cannot create organizations (ADR 0021)
+        <Link
+          href="/organizations/new"
+          className="whitespace-nowrap text-sm font-semibold text-indigo-600 hover:text-indigo-500"
+        >
+          New organization
+        </Link>
+      )}
       {activate.isError ? (
         <p role="alert" className="text-sm text-red-600">
           Couldn&apos;t switch organization.

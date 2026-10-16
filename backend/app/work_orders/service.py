@@ -319,7 +319,7 @@ def change_status(
     effect = workflow.REQUEST_EFFECTS.get(to_status)
     if effect is not None:
         maintenance_service.apply_linked_status(
-            request, effect, context, reason or f"Work order {to_status}"
+            request, effect, context, reason or f"Work order {to_status.replace('_', ' ')}"
         )
     audit.record(
         "work_order.status_changed",

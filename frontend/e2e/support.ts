@@ -15,7 +15,9 @@ export async function registerNewUser(page: Page, fullName: string): Promise<str
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  // Account creation hashes the password with Argon2, slow by design; under parallel
+  // journeys (and the demo's sandbox building) it can take longer than the default 5 s.
+  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
   return email;
 }
 
@@ -55,7 +57,9 @@ export async function acceptAsNewUser(page: Page, link: string, fullName: string
   await page.getByLabel("Full name").fill(fullName);
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  // Account creation hashes the password with Argon2, slow by design; under parallel
+  // journeys (and the demo's sandbox building) it can take longer than the default 5 s.
+  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
 }
 
 export async function createProperty(page: Page, name: string): Promise<string> {
