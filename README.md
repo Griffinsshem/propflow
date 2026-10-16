@@ -31,7 +31,7 @@ Every request keeps its full history, and each person sees only their part:
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
   B[Browser] -->|HTTPS| V["Vercel · Next.js<br/>pages and /api proxy"]
   V -->|"proxy secret + visitor IP"| A["Render · Flask API<br/>gunicorn"]
   A --> N[("Neon · PostgreSQL")]
