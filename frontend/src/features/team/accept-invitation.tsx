@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore, type ReactNode } from "react";
 
@@ -34,7 +35,9 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
     <main className="flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
         <p className="mb-8 text-center text-2xl font-bold tracking-tight text-indigo-600">
-          PropFlow
+          <Link href="/" className="hover:opacity-80">
+            PropFlow
+          </Link>
         </p>
         <div className="space-y-5 rounded-xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
           <h1 className="text-xl font-semibold">{title}</h1>

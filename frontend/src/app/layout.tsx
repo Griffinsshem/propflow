@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
 
@@ -8,6 +8,8 @@ import "./globals.css";
 
 // Absolute addresses for share images on every page: Vercel's production address, else local.
 const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+
+export const viewport: Viewport = { themeColor: "#4f46e5" };
 
 export const metadata: Metadata = {
   metadataBase: new URL(productionHost ? `https://${productionHost}` : "http://localhost:3000"),
