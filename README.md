@@ -63,7 +63,7 @@ second editor instead of being overwritten. Maintenance requests and work orders
 explicit state machines, with every transition recorded.
 
 **Testing.** Every change runs, in CI: 368 API tests (unit, integration and security, against
-PostgreSQL), 76 frontend unit tests, and 43 browser journeys with Playwright against the real
+PostgreSQL), 76 frontend unit tests, and 46 browser journeys with Playwright against the real
 API, plus linting, type checks, formatting, dependency audits and a secret scan.
 
 **Decisions.** Twenty-one architecture decision records explain the choices and their
