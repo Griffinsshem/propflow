@@ -169,3 +169,17 @@ file invitations under Promotions or Spam. Authenticating a domain in Brevo fixe
 **Known free-plan limits** (ADR 0019): the API sleeps after 15 idle minutes (first request
 waits up to a minute); email and photo processing run inside the request; housekeeping jobs
 (expired sessions, abandoned uploads, old notifications) do not run.
+
+## Dependency updates (Dependabot)
+
+Dependabot opens grouped pull requests each week (minor and patch versions only; the major
+versions that broke the build are ignored in `.github/dependabot.yml`). Merge them with:
+
+```bash
+scripts/merge-dependabot.sh <pr> [<pr> ...]   # without arguments: lists the open ones
+```
+
+It refuses pull requests not opened by Dependabot, lists each update and asks before any
+breaking-looking jump, brings each PR up to date with `main`, waits for fresh checks on that
+exact commit, and merges only that commit. Never merge on an old green tick: checks that ran
+against an older `main` say nothing about today's code.
