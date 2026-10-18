@@ -29,6 +29,7 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title: { absolute: TITLE },
   description: DESCRIPTION,
+  alternates: { canonical: "/" },
   openGraph: { title: TITLE, description: DESCRIPTION, siteName: "PropFlow", type: "website" },
   twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
 };
@@ -351,7 +352,14 @@ export default async function LandingPage() {
       <footer className="border-t border-slate-200">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-sm text-slate-500 sm:flex-row sm:justify-between">
           <p>© {year} PropFlow · Built by Griffins Shem</p>
-          <p>Property operations: maintenance, work orders and tenants in one place.</p>
+          <nav aria-label="Footer" className="flex gap-4">
+            <Link href="/privacy" className="hover:text-slate-700">
+              Privacy
+            </Link>
+            <a href="https://github.com/Griffinsshem/propflow" className="hover:text-slate-700">
+              Source on GitHub
+            </a>
+          </nav>
         </div>
       </footer>
     </div>

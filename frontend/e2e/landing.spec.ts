@@ -37,3 +37,36 @@ test.describe("on a phone", () => {
     expect(overflow).toBeLessThanOrEqual(0);
   });
 });
+
+test("unknown addresses get a branded page with a way home", async ({ page }) => {
+  const response = await page.goto("/no-such-page");
+  expect(response?.status()).toBe(404);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("This page doesn't exist");
+  await page.getByRole("link", { name: "Go to the home page" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Maintenance requests that don't get lost.",
+  );
+});
+
+test("the sign-in page leads back to the home page", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByRole("link", { name: "PropFlow", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Maintenance requests that don't get lost.",
+  );
+});
+
+test("search engines get rules, a sitemap and a privacy notice", async ({ page, request }) => {
+  const robots = await request.get("/robots.txt");
+  expect(robots.status()).toBe(200);
+  expect(await robots.text()).toContain("Disallow: /dashboard");
+  const sitemap = await request.get("/sitemap.xml");
+  expect(sitemap.status()).toBe(200);
+  expect(await sitemap.text()).toContain("/privacy</loc>");
+  await page.goto("/");
+  await page
+    .getByRole("navigation", { name: "Footer" })
+    .getByRole("link", { name: "Privacy" })
+    .click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Privacy");
+});
