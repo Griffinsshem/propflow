@@ -34,7 +34,10 @@ breaking_jumps() {  # prints any update whose version jump may break things
 }
 
 merge_fresh() {
-  local pr="$1" author before head result
+  local pr="$1" state author before head result
+  state="$(gh pr view "$pr" --json state -q .state 2>/dev/null)" \
+    || fail "#$pr does not exist in $repo (run the script without arguments to list open ones)"
+  [ "$state" = OPEN ] || fail "#$pr is $state, not open: nothing to merge"
   author="$(gh pr view "$pr" --json author -q .author.login)"
   case "$author" in
     dependabot|app/dependabot|dependabot\[bot\]) ;;
