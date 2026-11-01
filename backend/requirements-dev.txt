@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-index --output-file=requirements-dev.txt --strip-extras requirements-dev.in
 #
-ast-serialize==0.11.2
+ast-serialize==0.13.1
     # via mypy
 bandit==1.9.4
     # via -r requirements-dev.in
@@ -40,7 +40,7 @@ mdurl==0.1.2
     # via markdown-it-py
 msgpack==1.2.3
     # via cachecontrol
-mypy==2.4.0
+mypy==2.4.1
     # via -r requirements-dev.in
 mypy-extensions==1.1.0
     # via mypy
@@ -74,7 +74,7 @@ pygments==2.21.0
     #   rich
 pyparsing==3.3.3
     # via pip-requirements-parser
-pytest==9.1.1
+pytest==9.2.0
     # via
     #   -r requirements-dev.in
     #   pytest-cov
@@ -90,7 +90,7 @@ rich==15.0.0
     # via
     #   bandit
     #   pip-audit
-ruff==0.17.0
+ruff==0.17.3
     # via -r requirements-dev.in
 sortedcontainers==2.4.0
     # via cyclonedx-python-lib
