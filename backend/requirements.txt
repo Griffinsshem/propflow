@@ -6,7 +6,7 @@
 #
 alembic==1.20.0
     # via flask-migrate
-amqp==5.4.0
+amqp==5.4.2
     # via kombu
 apispec==6.10.0
     # via flask-smorest
@@ -14,17 +14,17 @@ argon2-cffi==25.1.0
     # via -r requirements.in
 argon2-cffi-bindings==26.1.0
     # via argon2-cffi
-billiard==4.3.0
+billiard==4.3.2
     # via celery
 blinker==1.9.0
     # via flask
-boto3==1.43.113
+boto3==1.44.1
     # via -r requirements.in
-botocore==1.43.114
+botocore==1.44.3
     # via
     #   boto3
     #   s3transfer
-celery==5.6.3
+celery==5.7.0
     # via -r requirements.in
 cffi==2.1.1
     # via argon2-cffi-bindings
@@ -39,7 +39,7 @@ click-didyoumean==0.3.1
     # via celery
 click-plugins==1.1.1.2
     # via celery
-click-repl==0.4.0
+click-repl==0.4.1
     # via celery
 deprecated==3.0.0
     # via limits
@@ -73,7 +73,7 @@ jmespath==1.1.0
     # via
     #   boto3
     #   botocore
-kombu==5.6.2
+kombu==5.7.0
     # via celery
 limits==5.8.0
     # via flask-limiter
@@ -102,9 +102,9 @@ pillow==12.3.0
     # via -r requirements.in
 prompt-toolkit==3.0.53
     # via click-repl
-psycopg==3.3.6
+psycopg==3.3.9
     # via -r requirements.in
-psycopg-binary==3.3.6
+psycopg-binary==3.3.9
     # via psycopg
 pycparser==3.0
     # via cffi
@@ -123,7 +123,7 @@ s3transfer==0.19.2
     # via boto3
 six==1.17.0
     # via python-dateutil
-sqlalchemy==2.1.4
+sqlalchemy==2.1.8
     # via
     #   -r requirements.in
     #   alembic
@@ -138,8 +138,6 @@ typing-extensions==4.16.0
     #   limits
     #   psycopg
     #   sqlalchemy
-tzdata==2026.4
-    # via kombu
 tzlocal==5.4.4
     # via celery
 urllib3==2.8.0
